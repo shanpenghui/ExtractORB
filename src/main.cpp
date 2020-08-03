@@ -4,7 +4,9 @@
 #include <algorithm>
 #include <opencv2/opencv.hpp>
 
-// 参考 https://blog.csdn.net/fsFengQingYangheihei/article/details/73572856?locationNum=8&fps=1
+// 参考
+// https://blog.csdn.net/fsFengQingYangheihei/article/details/73572856?locationNum=8&fps=1
+// https://blog.csdn.net/sinat_23093485/article/details/89569982
 
 using namespace std;
 using namespace cv;
@@ -14,10 +16,10 @@ const float scale_factor = 1.2f; // 金字塔图像之间的尺度参数
 const int levels_num = 8;        // 金字塔层数
 const int default_fast_T = 20;   // FAST默认检测阈值
 const int min_fast_T = 7;        // FAST最小检测阈值
-const int edge_threshold = 19;   // 边界尺度 对应ORB_SLAM3中的 const int EDGE_THRESHOLD = 19;
+const int EDGE_THRESHOLD = 19;   // 边界尺度 对应ORB_SLAM3中的 const int EDGE_THRESHOLD = 19;
 const int PATCH_SIZE = 31;
 
-//定义四叉树节点类
+// 定义四叉树节点类
 class ExtractorNode {
  public:
   ExtractorNode() : bNoMore(false) {}
@@ -137,7 +139,7 @@ void ComputePyramid(const int levels_num,
 
 int main() {
   // 1.读取图像
-  cv::Mat img = cv::imread("../1520531124150444163.png", CV_LOAD_IMAGE_COLOR);
+  cv::Mat img = cv::imread("../pic/luna.jpg", CV_LOAD_IMAGE_COLOR);
   // 1.读取图像 -合法性检查
   if (img.empty()) {
     cout << "no picture was found ...." << endl;
@@ -160,8 +162,8 @@ int main() {
 
   // 3.对金字塔的每层图像分析特征点 - 初始化数据结构
   vector<int> feature_num_per_level;  // TODO: 不知道什么含义
-  std::vector<std::vector<cv::KeyPoint>> all_keypoints;
-  all_keypoints.resize(levels_num);
+  std::vector<std::vector<cv::KeyPoint>> allKeypoints;
+  allKeypoints.resize(levels_num);
 
   // 格子大小是30*30, TODO:这是什么格子？
   const float border_width = 30;
@@ -169,10 +171,10 @@ int main() {
   // 3.对金字塔的每层图像分析特征点 - 循环每层图像
   for (int level = 0; level < levels_num; ++level) {
     // 计算每一层图像进行特征检测区域的边缘坐标,因为FAST是检测中心点附近3个点的范围,即半径是3
-    const int min_boder_x = edge_threshold - 3;
+    const int min_boder_x = EDGE_THRESHOLD - 3;
     const int min_boder_y = min_boder_x;
-    const int max_boder_x = vec_img_pyramid[level].cols - edge_threshold + 3;
-    const int max_boder_y = vec_img_pyramid[level].rows - edge_threshold + 3;
+    const int max_boder_x = vec_img_pyramid[level].cols - EDGE_THRESHOLD + 3;
+    const int max_boder_y = vec_img_pyramid[level].rows - EDGE_THRESHOLD + 3;
 
     // 金字塔每层图像的特征点
     vector<cv::KeyPoint> vec_to_per_distribute_keys;
@@ -186,8 +188,8 @@ int main() {
     // 金字塔每层图像格子宽和高
     const int width_cell = ceil(width / cols);
     const int height_cell = ceil(height / rows);
-    cout << "第" << level + 1 << "层图像被切割成 " << rows << " 行 " << cols << " 列. 格子有 " << width_cell << " 列 " << height_cell
-         << " 行 ";
+    cout << "第" << level + 1 << "层图像宽 " << width << " 高 " << height << ", 格子有 " << width_cell << " 列 " << height_cell
+         << " 行, 被切割成 " << rows << " 行 " << cols << " 列, ";
 
     // 开始检测每个格子中的特征点，并统计图像中所有的特征点，为四叉树划分做准备
     for (int i = 0; i < rows; ++i) { // start of rows recycle
@@ -223,9 +225,12 @@ int main() {
                    true);
         }
 
+        // 将检测到的特征点
         if (!vec_keys_cell.empty()) {
           for (std::vector<cv::KeyPoint>::iterator vit = vec_keys_cell.begin();
                vit != vec_keys_cell.end(); vit++) {
+            // TODO:为什么要加这个？为了分配到格子中？
+            // 答：因为图像金字塔是经过缩放的,检测到的角点坐标需要还原成原始图像1:1比例下的坐标
             (*vit).pt.x += j * width_cell;
             (*vit).pt.y += i * height_cell;
             vec_to_per_distribute_keys.push_back(*vit);
@@ -240,7 +245,7 @@ int main() {
     cout << "共有 " << vec_to_per_distribute_keys.size() << " 个特征点." << endl;
 
     // 开始划分四叉树节点的准备工作
-    std::vector<cv::KeyPoint> &keypoints = all_keypoints[level];
+    std::vector<cv::KeyPoint> &keypoints = allKeypoints[level];
     keypoints.reserve(features_num);
 
     // 划分根节点
@@ -250,107 +255,135 @@ int main() {
     const float interval_x = static_cast<float >(max_boder_x - min_boder_x) / init_node_num;
     cout << "节点间隔： " << interval_x << endl;
 
-    std::list<ExtractorNode> list_nodes;   //用来存储所有的四叉树节点
-    std::vector<ExtractorNode *> init_nodes_address;   //用来存储所有的四叉树节点中的vkeys
-    init_nodes_address.resize(init_node_num);
+    std::list<ExtractorNode> lNodes;       // 用来存储所有的四叉树节点
+    std::vector<ExtractorNode *> vpIniNodes;   // 用来存储所有的四叉树节点中的vkeys
+    vpIniNodes.resize(init_node_num);
 
-    //根节点的UL，UR，BL，BR是不含边界的坐标，在最后的关键点坐边要补加上边界大小
+    // 根据原始根结点数量, 设置其4个对应的子结点, 并将其加入到根节点的队列中
     for (int i = 0; i < init_node_num; ++i) {
       ExtractorNode ni;
       ni.UL = cv::Point2i(interval_x * static_cast<float >(i), 0);
       ni.UR = cv::Point2i(interval_x * static_cast<float >(i + 1), 0);
       ni.BL = cv::Point2i(ni.UL.x, max_boder_y - min_boder_y);
-      ni.BR = cv::Point2i(ni.UR.x, max_boder_y - min_boder_x);
+      ni.BR = cv::Point2i(ni.UR.x, max_boder_y - min_boder_y);
       ni.vkeys.reserve(vec_to_per_distribute_keys.size());
 
-      list_nodes.push_back(ni);
-      init_nodes_address[i] = &list_nodes.back();
+      // 将4个对应的子结点存储起来
+      lNodes.push_back(ni);
+
+      // 将原始根结点 ni 加入到根节点的队列中
+      vpIniNodes[i] = &lNodes.back();
     }
 
+    // 将所有的特征点加入到初始根结点中
     for (size_t i = 0; i < vec_to_per_distribute_keys.size(); ++i) {
       const cv::KeyPoint &kp = vec_to_per_distribute_keys[i];
-      init_nodes_address[kp.pt.x / interval_x]->vkeys.push_back(kp);
+      // 利用x坐标除以x间隔的结果, 对特征点进行筛选
+      vpIniNodes[kp.pt.x / interval_x]->vkeys.push_back(kp);
     }
 
-    //list_nodes中的结点和 init_nodes_address中的结点指针是同步的，只有在 list_nodes中存储的结点中存储了特征点，才能根据特征点的数目来决定如何处理这个结点
-    //那如果在list_nodes中删除一个没有特征点的结点，那么在 init_nodes_address中对应的这个地址也会被销毁
-    list<ExtractorNode>::iterator lit = list_nodes.begin();
-    while (lit != list_nodes.end()) {
+    // list_nodes中的结点和 init_nodes_address中的结点指针是同步的
+    // 只有在 lNodes 中存储的结点中存储了特征点，才能根据特征点的数目来决定如何处理这个结点
+    // 那如果在 lNodes 中删除一个没有特征点的结点，那么在 init_nodes_address中对应的这个地址也会被销毁
+    list<ExtractorNode>::iterator lit = lNodes.begin();
+    while (lit != lNodes.end()) {
+      // 如果当前根结点中角点数量为1,则不再划分四叉树
       if (lit->vkeys.size() == 1) {
+        // 利用 lit->bNoMore 来判断是否继续划分四叉树
         lit->bNoMore = true;
         lit++;
-      } else if (lit->vkeys.empty()) {
-        lit = list_nodes.erase(lit);
-      } else
+      }
+        // 如果该结点没有特征点,则删除该结点
+      else if (lit->vkeys.empty()) {
+        // 链表删除过后,会指向下一个结点的地址
+        // 或者 lNodes.erase(lit++);
+        lit = lNodes.erase(lit);
+      }
+        // 否则继续划分四叉树
+      else {
         lit++;
+      }
     }
 
-    //开始划分四叉树节点
+    // 开始划分四叉树节点
     bool is_finish = false;
     int iteration = 0;
+    std::vector<std::pair<int, ExtractorNode *>> vSizeAndPointerToNode;
+    vSizeAndPointerToNode.reserve(lNodes.size() * 4);
 
-    std::vector<std::pair<int, ExtractorNode *>> key_size_and_node;
-    key_size_and_node.reserve(list_nodes.size() * 4);
-
+    // 开始循环,循环的目的是按照四叉树细分每个结点,直到每个结点不可分为止
+    // 不可分包含两种情况,结点所含特征点为1或>1
+    // 之所以要用四叉树就是要快速找到扎堆的点并取其最大响应值的点作为最终的特征点
     while (!is_finish) {
       iteration++;
-      int pre_size = list_nodes.size();
-
-      lit = list_nodes.begin();
+      int pre_size = lNodes.size();
+      lit = lNodes.begin();
       int to_expand_num = 0;
-      key_size_and_node.clear();
+      vSizeAndPointerToNode.clear();
 
-      while (lit != list_nodes.end()) {
+      // 一次循环下来,将当前lNode中的根结点全部细分成子结点
+      // 并将子结点加入到lNode的前部且不会被遍历到,删除对应的根结点
+      // 注意一次遍历,只会处理根结点,新加入的子结点不会被遍历到
+      while (lit != lNodes.end()) {
         if (lit->bNoMore) {
+          // If node only contains one point
+          // do not subdivide and continue
           lit++;
           continue;
         } else {
+          // If more than one point, subdivide
+          // 构造四个子结点,并将当前特征点分到这四个子结点中
           ExtractorNode n1, n2, n3, n4;
           lit->DivideNode(n1, n2, n3, n4);
 
+          // Add childs if they contain points
           if (n1.vkeys.size() > 0) {
-            list_nodes.push_front(n1);
+            // 注意这里是从前部加进去的, 以避免循环到新结点
+            lNodes.push_front(n1);
             if (n1.vkeys.size() > 1) {
               to_expand_num++;
-              key_size_and_node.push_back(std::make_pair(n1.vkeys.size(), &list_nodes.front()));
-              list_nodes.front().lit = list_nodes.begin();  //把节点中的迭代器指向自身，在后面的判断条件中使用
+              vSizeAndPointerToNode.push_back(std::make_pair(n1.vkeys.size(), &lNodes.front()));
+              // 把节点中的迭代器指向自身，在后面的判断条件中使用
+              // TODO:没懂
+              lNodes.front().lit = lNodes.begin();
             }
           }
           if (n2.vkeys.size() > 0) {
-            list_nodes.push_front(n2);
+            lNodes.push_front(n2);
             if (n2.vkeys.size() > 1) {
               to_expand_num++;
-              key_size_and_node.push_back(std::make_pair(n2.vkeys.size(), &list_nodes.front()));
-              list_nodes.front().lit = list_nodes.begin();
+              vSizeAndPointerToNode.push_back(std::make_pair(n2.vkeys.size(), &lNodes.front()));
+              lNodes.front().lit = lNodes.begin();
             }
           }
           if (n3.vkeys.size() > 0) {
-            list_nodes.push_front(n3);
+            lNodes.push_front(n3);
             if (n3.vkeys.size() > 1) {
               to_expand_num++;
-              key_size_and_node.push_back(std::make_pair(n3.vkeys.size(), &list_nodes.front()));
-              list_nodes.front().lit = list_nodes.begin();
+              vSizeAndPointerToNode.push_back(std::make_pair(n3.vkeys.size(), &lNodes.front()));
+              lNodes.front().lit = lNodes.begin();
             }
           }
           if (n4.vkeys.size() > 0) {
-            list_nodes.push_front(n4);
+            lNodes.push_front(n4);
             if (n4.vkeys.size() > 1) {
               to_expand_num++;
-              key_size_and_node.push_back(std::make_pair(n4.vkeys.size(), &list_nodes.front()));
-              list_nodes.front().lit = list_nodes.begin();
+              vSizeAndPointerToNode.push_back(std::make_pair(n4.vkeys.size(), &lNodes.front()));
+              lNodes.front().lit = lNodes.begin();
             }
           }
 
-          lit = list_nodes.erase(lit);
+          // 链表删除过后,会指向下一个结点的地址
+          // 或者 lNodes.erase(lit++);
+          // 分完过后,删除当前根结点
+          lit = lNodes.erase(lit);
           continue;
-        }
+        } // end If more than one point, subdivide
+      }// end while(lit != lNodes.end())
 
-      }
-
-      //计算当前level上应该分布多少特征点
-      //等比数列sn = a1(1-q^level)/(1-q)
-      //sn是总的特征数目，a1是level=0 层上的特征点数
-
+      // 计算当前level上应该分布多少特征点
+      // 等比数列sn = a1(1-q^level)/(1-q)
+      // sn是总的特征数目，a1是level=0 层上的特征点数
       feature_num_per_level.resize(levels_num);
       float factor = 1.0f / scale_factor;
       float desired_feature_per_scale =
@@ -365,17 +398,20 @@ int main() {
 
       //判断四叉树结束条件
       //当创建的结点的数目比要求的特征点还要多或者，每个结点中都只有一个特征点的时候就停止分割
-      if ((int) list_nodes.size() >= features_num || (int) list_nodes.size() == pre_size) {
+      if ((int) lNodes.size() >= features_num || (int) lNodes.size() == pre_size) {
         is_finish = true;
+      }
+      // 如果现在生成的结点全部进行分割后生成的结点满足大于需求的特征点的数目，但是不继续分割又不能满足大于N的要求时
+      // 这里为什么是乘以三，这里也正好印证了上面所说的当一个结点被分割成四个新的结点时，
+      // 这个结点时要被删除的，其实总的结点时增加了三个
 
-      } //如果现在生成的结点全部进行分割后生成的结点满足大于需求的特征点的数目，但是不继续分割又不能满足大于N的要求时
-        //这里为什么是乘以三，这里也正好印证了上面所说的当一个结点被分割成四个新的结点时，
-        //这个结点时要被删除的，其实总的结点时增加了三个
-      else if (((int) list_nodes.size() + to_expand_num * 3) > feature_num_per_level[level]) {
+      // 对于头一次从根结点,假设根结点只有1个,那么分出来的子结点只有4个,那么下面的的条件是进入不了的
+      // 当分的差不多时,只有个别结点未分时,进入以下逻辑
+      else if (((int) lNodes.size() + to_expand_num * 3) > feature_num_per_level[level]) {
         while (!is_finish) {
-          pre_size = list_nodes.size();
-          std::vector<std::pair<int, ExtractorNode *> > prve_size_and_node_adderss = key_size_and_node;
-          key_size_and_node.clear();
+          pre_size = lNodes.size();
+          std::vector<std::pair<int, ExtractorNode *> > prve_size_and_node_adderss = vSizeAndPointerToNode;
+          vSizeAndPointerToNode.clear();
 
           sort(prve_size_and_node_adderss.begin(), prve_size_and_node_adderss.end());
 
@@ -384,42 +420,41 @@ int main() {
             prve_size_and_node_adderss[j].second->DivideNode(n1, n2, n3, n4);
 
             if (n1.vkeys.size() > 0) {
-              list_nodes.push_front(n1);
+              lNodes.push_front(n1);
               if (n1.vkeys.size() > 1) {
-                key_size_and_node.push_back(std::make_pair(n1.vkeys.size(), &list_nodes.front()));
-                list_nodes.front().lit = list_nodes.begin();
+                vSizeAndPointerToNode.push_back(std::make_pair(n1.vkeys.size(), &lNodes.front()));
+                lNodes.front().lit = lNodes.begin();
               }
             }
-
             if (n2.vkeys.size() > 0) {
-              list_nodes.push_front(n2);
+              lNodes.push_front(n2);
               if (n2.vkeys.size() > 1) {
-                key_size_and_node.push_back(std::make_pair(n2.vkeys.size(), &list_nodes.front()));
-                list_nodes.front().lit = list_nodes.begin();
+                vSizeAndPointerToNode.push_back(std::make_pair(n2.vkeys.size(), &lNodes.front()));
+                lNodes.front().lit = lNodes.begin();
               }
             }
             if (n3.vkeys.size() > 0) {
-              list_nodes.push_front(n3);
+              lNodes.push_front(n3);
               if (n3.vkeys.size() > 1) {
-                key_size_and_node.push_back(std::make_pair(n3.vkeys.size(), &list_nodes.front()));
-                list_nodes.front().lit = list_nodes.begin();
+                vSizeAndPointerToNode.push_back(std::make_pair(n3.vkeys.size(), &lNodes.front()));
+                lNodes.front().lit = lNodes.begin();
               }
             }
             if (n4.vkeys.size() > 0) {
-              list_nodes.push_front(n4);
+              lNodes.push_front(n4);
               if (n4.vkeys.size() > 1) {
-                key_size_and_node.push_back(std::make_pair(n4.vkeys.size(), &list_nodes.front()));
-                list_nodes.front().lit = list_nodes.begin();
+                vSizeAndPointerToNode.push_back(std::make_pair(n4.vkeys.size(), &lNodes.front()));
+                lNodes.front().lit = lNodes.begin();
               }
             }
 
-            list_nodes.erase(prve_size_and_node_adderss[j].second->lit);
-            if ((int) list_nodes.size() >= feature_num_per_level[level]) {
+            lNodes.erase(prve_size_and_node_adderss[j].second->lit);
+            if ((int) lNodes.size() >= feature_num_per_level[level]) {
               break;
             }
           }
 
-          if ((int) list_nodes.size() >= features_num || (int) list_nodes.size() == pre_size)
+          if ((int) lNodes.size() >= features_num || (int) lNodes.size() == pre_size)
             is_finish = true;
         }
 
@@ -430,7 +465,7 @@ int main() {
     std::vector<cv::KeyPoint> result_keys;
     result_keys.reserve(feature_num_per_level[level]);
 
-    for (std::list<ExtractorNode>::iterator lit = list_nodes.begin(); lit != list_nodes.end(); lit++) {
+    for (std::list<ExtractorNode>::iterator lit = lNodes.begin(); lit != lNodes.end(); lit++) {
       vector<cv::KeyPoint> &node_keys = lit->vkeys;
       cv::KeyPoint *keypoint = &node_keys[0];
       float max_response = keypoint->response;
@@ -465,7 +500,7 @@ int main() {
   //统计所有层的特征点并进行尺度恢复
   int num_keypoints = 0;
   for (int level = 0; level < levels_num; ++level) {
-    num_keypoints += (int) all_keypoints[level].size();
+    num_keypoints += (int) allKeypoints[level].size();
   }
   cout << "total " << num_keypoints << " keypoints" << endl;
 
@@ -473,19 +508,19 @@ int main() {
 
   for (int level = 0; level < levels_num; ++level) {
     if (level == 0) {
-      for (int i = 0; i < all_keypoints[level].size(); ++i) {
-        out_put_all_keypoints.push_back(all_keypoints[level][i]);
+      for (int i = 0; i < allKeypoints[level].size(); ++i) {
+        out_put_all_keypoints.push_back(allKeypoints[level][i]);
       }
     }
 
     float scale = vec_scale_per_factor[level];
-    for (vector<cv::KeyPoint>::iterator key = all_keypoints[level].begin();
-         key != all_keypoints[level].end(); key++) {
+    for (vector<cv::KeyPoint>::iterator key = allKeypoints[level].begin();
+         key != allKeypoints[level].end(); key++) {
       key->pt *= scale; //尺度恢复
     }
 
-    out_put_all_keypoints.insert(out_put_all_keypoints.end(), all_keypoints[level].begin(),
-                                 all_keypoints[level].end());
+    out_put_all_keypoints.insert(out_put_all_keypoints.end(), allKeypoints[level].begin(),
+                                 allKeypoints[level].end());
   }
 
   //对比试验
