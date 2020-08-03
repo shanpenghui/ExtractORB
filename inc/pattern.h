@@ -6,6 +6,7 @@
 #define FEATURE_EXTRACTOR_INC_PATTERN_H_
 
 #include <cstdio>
+#include <cstdlib>
 
 static int bit_pattern_31_[256*4] =
     {

@@ -8,36 +8,25 @@ int main(int argc, char **argv) {
 
   google::InitGoogleLogging(argv[0]);
   google::SetLogDestination(google::GLOG_INFO, "../log/log_");
-  google::SetStderrLogging(google::GLOG_INFO);
+  google::SetStderrLogging(google::GLOG_WARNING);
 
-  // 1.读取图像
-  cv::Mat image = cv::imread("../pic/luna.jpg", CV_LOAD_IMAGE_COLOR);
-  // 1.读取图像 -合法性检查
+  // 读取图像
+  string image_file_path = "../pic/luna.jpg";
+  cv::Mat image = cv::imread(image_file_path, CV_LOAD_IMAGE_COLOR);
   if (image.empty()) {
-    cout << "no picture was found ...." << endl;
+    cout << "The " << image_file_path << " was not found, please check if it existed." << endl;
     return 0;
   } else
-    cout << "image load successed!" << endl;
+    cout << "The " << image_file_path << " image load successed!" << endl;
 
-#ifdef IS_ORB_SLAM3
-  assert(image.type() == CV_8UC1);
-#endif
-
-  // Load ORB parameters
   // 参考 ORB_SLAM3 启动的 yaml 文件
-//# ORB Extractor: Number of features per image
-//  ORBextractor.nFeatures: 1500 # Tested with 1250
-  int nFeatures = 1500;// fSettings["ORBextractor.nFeatures"];
-//# ORB Extractor: Scale factor between levels in the scale pyramid
-//  ORBextractor.scaleFactor: 1.2
-  float fScaleFactor = 1.2;// fSettings["ORBextractor.scaleFactor"];
-//# ORB Extractor: Number of levels in the scale pyramid
-//  ORBextractor.nLevels: 8
-  int nLevels = 8;// fSettings["ORBextractor.nLevels"];
-//  ORBextractor.iniThFAST: 20 # 20
-//  ORBextractor.minThFAST: 7 # 7
-  int fIniThFAST = 20;// fSettings["ORBextractor.iniThFAST"];
-  int fMinThFAST = 7;// fSettings["ORBextractor.minThFAST"];
+  int nFeatures = 1500;       // 特征点上限
+  float fScaleFactor = 1.2;   // 图像金字塔缩放系数
+  int nLevels = 8;            // 图像金字塔层数
+  int fIniThFAST = 20;        // 默认FAST角点检测阈值
+  int fMinThFAST = 7;         // 最小FAST角点检测阈值
+
+  // 构造 ORBextractor
   ORBextractor my_orb_extractor(nFeatures, fScaleFactor, nLevels, fIniThFAST, fMinThFAST);
   my_orb_extractor.ComputePyramid(image);
   vector < vector<KeyPoint> > allKeypoints;

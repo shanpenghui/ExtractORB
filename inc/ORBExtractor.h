@@ -54,6 +54,8 @@ class ORBextractor {
 
   std::vector<float> mvScaleFactor;
 
+  void DisplayImageAndKeypoints(const Mat &inMat, const int level, const vector<KeyPoint> &inKeyPoint);
+
  protected:
   std::vector<int> mnFeaturesPerLevel;
   std::vector<float> mvInvScaleFactor;

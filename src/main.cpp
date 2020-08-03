@@ -165,7 +165,7 @@ int main() {
   std::vector<std::vector<cv::KeyPoint>> allKeypoints;
   allKeypoints.resize(levels_num);
 
-  // 格子大小是30*30, TODO:这是什么格子？
+  // 格子大小是 30*30, TODO:这是什么格子？
   const float border_width = 30;
 
   // 3.对金字塔的每层图像分析特征点 - 循环每层图像
