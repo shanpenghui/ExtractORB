@@ -24,6 +24,7 @@ int main(int argc, char **argv) {
 #endif
 
   // Load ORB parameters
+  // 参考 ORB_SLAM3 启动的 yaml 文件
 //# ORB Extractor: Number of features per image
 //  ORBextractor.nFeatures: 1500 # Tested with 1250
   int nFeatures = 1500;// fSettings["ORBextractor.nFeatures"];
