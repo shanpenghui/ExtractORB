@@ -13,7 +13,10 @@
 #include <glog/logging.h>
 #include "pattern.h"
 
+//#define SHOW_DIVIDE_IMAGE
+
 const int PATCH_SIZE = 31;
+const int HALF_PATCH_SIZE = 15;
 const int EDGE_THRESHOLD = 19;
 
 using namespace std;
