@@ -50,3 +50,6 @@ cd build
 cmake ..
 make -j 4
 ```
+
+3.result
+![https://github.com/shanpenghui/ExtractORB/img_folder/Screenshot.png](img_url)
