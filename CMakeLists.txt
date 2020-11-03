@@ -3,12 +3,15 @@ project(ExtractORB)
 
 set(CMAKE_CXX_STANDARD 14)
 
-find_package(OpenCV 3.0 QUIET)
+find_package(OpenCV 3)
 find_package(glog)
 include_directories(${OpenCV_INCLUDE_DIRS})
 
 add_executable(distribute_oct_tree src/oct_tree/main.cpp)
-target_link_libraries(distribute_oct_tree ${OpenCV_LIBS})
+target_link_libraries(distribute_oct_tree ${OpenCV_LIBS} glog::glog)
 
 add_executable(ORB_SLAM_Extractor src/orb_extractor/main_orb_extractor.cpp src/orb_extractor/ORBExtractor.cpp)
 target_link_libraries(ORB_SLAM_Extractor ${OpenCV_LIBS} glog::glog)
+
+add_executable(undistort src/undistort/main_undistort.cpp src/orb_extractor/ORBExtractor.cpp)
+target_link_libraries(undistort ${OpenCV_LIBS} glog::glog)
