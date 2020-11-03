@@ -2,7 +2,7 @@
 // Created by sph on 2020/11/3.
 //
 
-#include "../../inc/ORBExtractor.h"
+#include "ORBExtractor.h"
 
 int main(int argc, char **argv) {
 
@@ -52,7 +52,13 @@ int main(int argc, char **argv) {
         return 0;
     }
 
-
+    cv::Mat mDistCoef;
+    // TUM_512.yaml in Monocular folder
+    mDistCoef.at<float>(0) = 0.003482389402;//k1
+    mDistCoef.at<float>(1) = 0.000715034845;//k2
+    mDistCoef.at<float>(2) = 0;//p1
+    mDistCoef.at<float>(3) = 0;//p2
+    mDistCoef.at<float>(4) = -0.002053236141;//k3
 
     return 0;
 }

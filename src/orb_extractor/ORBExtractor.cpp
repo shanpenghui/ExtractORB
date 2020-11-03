@@ -2,7 +2,7 @@
 // Created by sph on 2020/8/3.
 //
 
-#include "../../inc/ORBExtractor.h"
+#include "ORBExtractor.h"
 
 //特征点提取器的构造函数
 ORBextractor::ORBextractor(int _nfeatures,		//指定要提取的特征点数目

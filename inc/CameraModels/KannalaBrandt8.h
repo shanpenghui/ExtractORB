@@ -30,7 +30,7 @@
 
 #include "GeometricCamera.h"
 
-#include "TwoViewReconstruction.h"
+//#include "TwoViewReconstruction.h"
 
 namespace ORB_SLAM3 {
     class KannalaBrandt8 final : public GeometricCamera {
@@ -50,11 +50,11 @@ namespace ORB_SLAM3 {
             mnId=nNextId++;
             mnType = CAM_FISHEYE;
         }
-        KannalaBrandt8(const std::vector<float> _vParameters) : GeometricCamera(_vParameters), precision(1e-6), mvLappingArea(2,0) ,tvr(nullptr) {
-            assert(mvParameters.size() == 8);
-            mnId=nNextId++;
-            mnType = CAM_FISHEYE;
-        }
+//        KannalaBrandt8(const std::vector<float> _vParameters) : GeometricCamera(_vParameters), precision(1e-6), mvLappingArea(2,0) ,tvr(nullptr) {
+//            assert(mvParameters.size() == 8);
+//            mnId=nNextId++;
+//            mnType = CAM_FISHEYE;
+//        }
 
         KannalaBrandt8(const std::vector<float> _vParameters, const float _precision) : GeometricCamera(_vParameters),
                                                                                         precision(_precision), mvLappingArea(2,0) {
@@ -62,11 +62,11 @@ namespace ORB_SLAM3 {
             mnId=nNextId++;
             mnType = CAM_FISHEYE;
         }
-        KannalaBrandt8(KannalaBrandt8* pKannala) : GeometricCamera(pKannala->mvParameters), precision(pKannala->precision), mvLappingArea(2,0) ,tvr(nullptr) {
-            assert(mvParameters.size() == 8);
-            mnId=nNextId++;
-            mnType = CAM_FISHEYE;
-        }
+//        KannalaBrandt8(KannalaBrandt8* pKannala) : GeometricCamera(pKannala->mvParameters), precision(pKannala->precision), mvLappingArea(2,0) ,tvr(nullptr) {
+//            assert(mvParameters.size() == 8);
+//            mnId=nNextId++;
+//            mnType = CAM_FISHEYE;
+//        }
 
         cv::Point2f project(const cv::Point3f &p3D);
         cv::Point2f project(const cv::Mat& m3D);
@@ -107,7 +107,7 @@ namespace ORB_SLAM3 {
         //Parameters vector corresponds to
         //[fx, fy, cx, cy, k0, k1, k2, k3]
 
-        TwoViewReconstruction* tvr;
+//        TwoViewReconstruction* tvr;
 
         void Triangulate(const cv::Point2f &p1, const cv::Point2f &p2, const cv::Mat &Tcw1, const cv::Mat &Tcw2,cv::Mat &x3D);
     };

@@ -30,7 +30,7 @@
 
 #include "GeometricCamera.h"
 
-#include "TwoViewReconstruction.h"
+//#include "TwoViewReconstruction.h"
 
 namespace ORB_SLAM3 {
     class Pinhole : public GeometricCamera {
@@ -49,21 +49,21 @@ namespace ORB_SLAM3 {
             mnId=nNextId++;
             mnType = CAM_PINHOLE;
         }
-        Pinhole(const std::vector<float> _vParameters) : GeometricCamera(_vParameters), tvr(nullptr) {
-            assert(mvParameters.size() == 4);
-            mnId=nNextId++;
-            mnType = CAM_PINHOLE;
-        }
+//        Pinhole(const std::vector<float> _vParameters) : GeometricCamera(_vParameters), tvr(nullptr) {
+//            assert(mvParameters.size() == 4);
+//            mnId=nNextId++;
+//            mnType = CAM_PINHOLE;
+//        }
 
-        Pinhole(Pinhole* pPinhole) : GeometricCamera(pPinhole->mvParameters), tvr(nullptr) {
-            assert(mvParameters.size() == 4);
-            mnId=nNextId++;
-            mnType = CAM_PINHOLE;
-        }
+//        Pinhole(Pinhole* pPinhole) : GeometricCamera(pPinhole->mvParameters), tvr(nullptr) {
+//            assert(mvParameters.size() == 4);
+//            mnId=nNextId++;
+//            mnType = CAM_PINHOLE;
+//        }
 
 
         ~Pinhole(){
-            if(tvr) delete tvr;
+//            if(tvr) delete tvr;
         }
 
         cv::Point2f project(const cv::Point3f &p3D);
@@ -101,7 +101,7 @@ namespace ORB_SLAM3 {
         //Parameters vector corresponds to
         //      [fx, fy, cx, cy]
 
-        TwoViewReconstruction* tvr;
+//        TwoViewReconstruction* tvr;
     };
 }
 
