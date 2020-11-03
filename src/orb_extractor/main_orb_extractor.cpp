@@ -11,8 +11,8 @@ int main(int argc, char **argv) {
   google::SetStderrLogging(google::GLOG_WARNING);
 
   // 读取图像
-  string image_file_path = "../pic/luna.jpg";
-  cv::Mat image = cv::imread(image_file_path, CV_LOAD_IMAGE_COLOR);
+  string image_file_path = "../pic/TUM/dataset-room4_512_16/mav0/cam0/data/1520531124150444163.png";
+  cv::Mat image = cv::imread(image_file_path, CV_LOAD_IMAGE_GRAYSCALE);
   if (image.empty()) {
     cout << "The " << image_file_path << " was not found, please check if it existed." << endl;
     return 0;
@@ -29,7 +29,7 @@ int main(int argc, char **argv) {
   // 构造 ORBextractor
   ORBextractor my_orb_extractor(nFeatures, fScaleFactor, nLevels, fIniThFAST, fMinThFAST);
   my_orb_extractor.ComputePyramid(image);
-  vector < vector<KeyPoint> > allKeypoints;
+  vector<vector<KeyPoint>> allKeypoints;
   my_orb_extractor.ComputeKeyPointsOctTree(allKeypoints);
 
   //统计所有层的特征点并进行尺度恢复
@@ -53,7 +53,7 @@ int main(int argc, char **argv) {
     out_put_all_keypoints.insert(out_put_all_keypoints.end(), allKeypoints[level].begin(),
                                  allKeypoints[level].end());
   }
-  
+
   cout << "最终特征点分布：" << endl;
   Mat out_put_image;
   drawKeypoints(image, out_put_all_keypoints, out_put_image);
