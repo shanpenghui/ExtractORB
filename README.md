@@ -52,4 +52,4 @@ make -j 4
 ```
 
 3.result
-![https://github.com/shanpenghui/ExtractORB/img_folder/Screenshot.png](img_url)
+![](https://github.com/shanpenghui/ExtractORB/tree/master/img_folder/Screenshot.png)
