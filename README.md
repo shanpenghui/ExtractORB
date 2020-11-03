@@ -1,10 +1,34 @@
-# Feature_Extractor
-To understand the principle of ORB-SLAM I create this subproject.
-Contains two parts for now:
-> Distribute Oct Tree
+# ExtractORB
+This project is to show the process of ExtractORB function in ORB-SLAM3 which is in file ORBextractor.cc.
+>void Frame::ExtractORB(int flag, const cv::Mat &im)
 >
-> Orb Extractor
+
+Help to understand the ORB-SLAM3 step by step.
+
+I pull functions related as a class named ORBextractor, which contains the functions below:
+> ORBextractor
 >
+> ComputePyramid
+>
+>IC_Angle
+>
+>computeOrientation
+>
+>ComputeKeyPointsOctTree
+>
+>DisplayImageAndKeypoints
+>
+>DistributeOctTree
+>
+>DivideNode
+>
+>computeOrbDescriptor
+>
+>computeDescriptors
+>
+>operator()
+>
+
 
 ## Usage
 1.Install
