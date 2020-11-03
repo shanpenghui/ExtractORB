@@ -49,11 +49,13 @@ namespace ORB_SLAM3 {
             mnId=nNextId++;
             mnType = CAM_PINHOLE;
         }
-//        Pinhole(const std::vector<float> _vParameters) : GeometricCamera(_vParameters), tvr(nullptr) {
-//            assert(mvParameters.size() == 4);
-//            mnId=nNextId++;
-//            mnType = CAM_PINHOLE;
-//        }
+        Pinhole(const std::vector<float> _vParameters) : GeometricCamera(_vParameters)
+//        , tvr(nullptr)
+        {
+            assert(mvParameters.size() == 4);
+            mnId=nNextId++;
+            mnType = CAM_PINHOLE;
+        }
 
 //        Pinhole(Pinhole* pPinhole) : GeometricCamera(pPinhole->mvParameters), tvr(nullptr) {
 //            assert(mvParameters.size() == 4);

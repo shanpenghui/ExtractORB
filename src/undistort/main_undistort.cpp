@@ -63,12 +63,18 @@ int main(int argc, char **argv) {
     mDistCoef.at<float>(3) = 0;//p2
     mDistCoef.at<float>(4) = -0.002053236141;//k3
 
+    //
     const std::vector<cv::KeyPoint> mvKeysUn;
-
     ORB_SLAM3::GeometricCamera *pCamera;
-
+    // TUM_512.yaml in Monocular folder
+    float fx, fy, cx, cy;
+    fx = 190.978477;
+    fy = 190.973307;
+    cx = 254.931706;
+    cy = 256.897442;
+    vector<float> vCamCalib{fx,fy,cx,cy};
+    pCamera = new ORB_SLAM3::Pinhole(vCamCalib);
     cv::Mat mK(static_cast<ORB_SLAM3::Pinhole*>(pCamera)->toK());
-
     UndistortKeyPoints(mDistCoef, mvKeys, mvKeysUn, N, pCamera, mK);
 
     return 0;
