@@ -421,7 +421,7 @@ void ORBextractor::ComputeKeyPointsOctTree(
                                       level);						//当前层图像所在的图层
 
         // 显示当前层的图像和特征点
-        DisplayImageAndKeypoints(mvImagePyramid[level], level, keypoints);
+//        DisplayImageAndKeypoints(mvImagePyramid[level], level, keypoints);
 
         //PATCH_SIZE是对于底层的初始图像来说的，现在要根据当前图层的尺度缩放倍数进行缩放得到缩放后的PATCH大小 和特征点的方向计算有关
         const int scaledPatchSize = PATCH_SIZE*mvScaleFactor[level];

@@ -3,6 +3,8 @@
 //
 
 #include "ORBExtractor.h"
+#include "Pinhole.h"
+#include "Frame.h"
 
 int main(int argc, char **argv) {
 
@@ -40,8 +42,8 @@ int main(int argc, char **argv) {
     vector<int> vLapping = {0,1000};
     ORBextractor* mpORBextractorLeft = &my_orb_extractor;
     int monoLeft = (*mpORBextractorLeft)(image,cv::Mat(),mvKeys,mDescriptors,vLapping);
-    LOG(INFO) << "monoLeft = " << monoLeft;
-    LOG(INFO) << "mvKeys.size() = " << mvKeys.size();
+//    LOG(INFO) << "monoLeft = " << monoLeft;
+//    LOG(INFO) << "mvKeys.size() = " << mvKeys.size();
 
     //求出特征点的个数
     int N = mvKeys.size();
@@ -53,12 +55,21 @@ int main(int argc, char **argv) {
     }
 
     cv::Mat mDistCoef;
+    mDistCoef = cv::Mat::zeros(5,1,CV_32F);
     // TUM_512.yaml in Monocular folder
     mDistCoef.at<float>(0) = 0.003482389402;//k1
     mDistCoef.at<float>(1) = 0.000715034845;//k2
     mDistCoef.at<float>(2) = 0;//p1
     mDistCoef.at<float>(3) = 0;//p2
     mDistCoef.at<float>(4) = -0.002053236141;//k3
+
+    const std::vector<cv::KeyPoint> mvKeysUn;
+
+    ORB_SLAM3::GeometricCamera *pCamera;
+
+    cv::Mat mK(static_cast<ORB_SLAM3::Pinhole*>(pCamera)->toK());
+
+    UndistortKeyPoints(mDistCoef, mvKeys, mvKeysUn, N, pCamera, mK);
 
     return 0;
 }
