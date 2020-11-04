@@ -104,12 +104,12 @@ namespace ORB_SLAM3 {
 
     bool Pinhole::ReconstructWithTwoViews(const std::vector<cv::KeyPoint>& vKeys1, const std::vector<cv::KeyPoint>& vKeys2, const std::vector<int> &vMatches12,
                                  cv::Mat &R21, cv::Mat &t21, std::vector<cv::Point3f> &vP3D, std::vector<bool> &vbTriangulated){
-//        if(!tvr){
-//            cv::Mat K = this->toK();
-//            tvr = new TwoViewReconstruction(K);
-//        }
+        if(!tvr){
+            cv::Mat K = this->toK();
+            tvr = new TwoViewReconstruction(K);
+        }
 
-//        return tvr->Reconstruct(vKeys1,vKeys2,vMatches12,R21,t21,vP3D,vbTriangulated);
+        return tvr->Reconstruct(vKeys1,vKeys2,vMatches12,R21,t21,vP3D,vbTriangulated);
     }
 
 

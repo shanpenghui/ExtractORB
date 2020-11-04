@@ -9,6 +9,7 @@ find_package(glog)
 include_directories(
         ${OpenCV_INCLUDE_DIRS}
         ${EIGEN3_INCLUDE_DIR}
+        ${CMAKE_SOURCE_DIR}
         ${CMAKE_SOURCE_DIR}/inc
         ${CMAKE_SOURCE_DIR}/inc/CameraModels
 )
@@ -19,5 +20,16 @@ target_link_libraries(distribute_oct_tree ${OpenCV_LIBS} glog::glog ${EIGEN3_LIB
 add_executable(ORB_SLAM_Extractor src/orb_extractor/main_orb_extractor.cpp src/orb_extractor/ORBExtractor.cpp)
 target_link_libraries(ORB_SLAM_Extractor ${OpenCV_LIBS} glog::glog ${EIGEN3_LIBS})
 
-add_executable(undistort src/undistort/main_undistort.cpp src/orb_extractor/ORBExtractor.cpp src/undistort/Frame.cpp src/CameraModels/KannalaBrandt8.cpp src/CameraModels/Pinhole.cpp)
-target_link_libraries(undistort ${OpenCV_LIBS} glog::glog ${EIGEN3_LIBS})
+add_executable(
+        undistort
+        src/undistort/main_undistort.cpp
+        src/orb_extractor/ORBExtractor.cpp
+        src/undistort/Frame.cpp
+        src/CameraModels/KannalaBrandt8.cpp
+        src/CameraModels/Pinhole.cpp
+        src/undistort/TwoViewReconstruction.cc
+        )
+target_link_libraries(undistort ${OpenCV_LIBS} glog::glog ${EIGEN3_LIBS}
+        ${PROJECT_SOURCE_DIR}/Thirdparty/DBoW2/lib/libDBoW2.so
+        ${PROJECT_SOURCE_DIR}/Thirdparty/g2o/lib/libg2o.so
+        )
