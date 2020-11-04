@@ -13,7 +13,7 @@ int main(int argc, char **argv) {
 
     // 读取图像
     string image_file_path = "../pic/TUM/dataset-room4_512_16/mav0/cam0/data/1520531124150444163.png";
-    cv::Mat image = cv::imread(image_file_path, CV_LOAD_IMAGE_GRAYSCALE);
+    cv::Mat image = cv::imread(image_file_path, cv::IMREAD_GRAYSCALE);
     if (image.empty()) {
         cout << "The " << image_file_path << " was not found, please check if it existed." << endl;
         return 0;
@@ -30,7 +30,7 @@ int main(int argc, char **argv) {
     /////////////////////////////////////////////////////////////
     //- Step 3 对这个单目图像进行提取特征点, 第一个参数0-左图， 1-右图 -//
     // 构造 ORBextractor
-    ORBextractor my_orb_extractor(nFeatures, fScaleFactor, nLevels, fIniThFAST, fMinThFAST);
+    ORBextractor my_orb_extractor(5 * nFeatures, fScaleFactor, nLevels, fIniThFAST, fMinThFAST);
     my_orb_extractor.ComputePyramid(image);
     vector<vector<KeyPoint>> allKeypoints;
     my_orb_extractor.ComputeKeyPointsOctTree(allKeypoints);
@@ -78,9 +78,9 @@ int main(int argc, char **argv) {
     std::vector<cv::KeyPoint> mvKeys;
     cv::Mat mDescriptors;
     // Monocular
-    vector<int> vLapping = {0,1000};
-    ORBextractor* mpORBextractorLeft = &my_orb_extractor;
-    int monoLeft = (*mpORBextractorLeft)(image,cv::Mat(),mvKeys,mDescriptors,vLapping);
+    vector<int> vLapping = {0, 1000};
+    ORBextractor *mpORBextractorLeft = &my_orb_extractor;
+    int monoLeft = (*mpORBextractorLeft)(image, cv::Mat(), mvKeys, mDescriptors, vLapping);
     LOG(INFO) << "monoLeft = " << monoLeft;
     LOG(INFO) << "mvKeys.size() = " << mvKeys.size();
 

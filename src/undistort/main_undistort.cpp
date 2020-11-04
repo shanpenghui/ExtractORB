@@ -5,7 +5,7 @@
 #include "KannalaBrandt8.h"
 #include "ORBExtractor.h"
 #include "Pinhole.h"
-#include "Frame.h"
+#include "Frame_changed.h"
 
 int main(int argc, char **argv) {
 
@@ -16,7 +16,8 @@ int main(int argc, char **argv) {
 
     // 读取图像
     string image_file_path = "../pic/TUM/dataset-room4_512_16/mav0/cam0/data/1520531124150444163.png";
-    cv::Mat image = cv::imread(image_file_path, CV_LOAD_IMAGE_GRAYSCALE);
+    cv::Mat image;
+    image = cv::imread(image_file_path, cv::IMREAD_GRAYSCALE);
     if (image.empty()) {
         cout << "The " << image_file_path << " was not found, please check if it existed." << endl;
         return 0;
@@ -48,6 +49,7 @@ int main(int argc, char **argv) {
 
     //求出特征点的个数
     int N = mvKeys.size();
+//    cout << "求出特征点的个数 = " << N << endl;
 
     //如果没有能够成功提取出特征点，那么就直接返回了
     if (mvKeys.empty()) {
@@ -138,8 +140,8 @@ int main(int argc, char **argv) {
     int Nleft = -1;
 
     // TODO: Check if it is correct!
-    AssignFeaturesToGrid(N, mGrid, Nleft, mGridRight, mvKeysUn, mvKeys,
-                         mvKeysRight, mnMinX, mnMinY, mfGridElementWidthInv, mfGridElementHeightInv);
+//    AssignFeaturesToGrid(N, mGrid, Nleft, mGridRight, mvKeysUn, mvKeys,
+//                         mvKeysRight, mnMinX, mnMinY, mfGridElementWidthInv, mfGridElementHeightInv);
 
     return 0;
 }
