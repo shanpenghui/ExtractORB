@@ -53,8 +53,15 @@ int main(int argc, char **argv) {
     cout << "ORB_SLAM3 has total " << image_total_keypoints << " keypoints" << endl;
 
     ORB_SLAM3::Frame mCurrentFrame;
-//    mCurrentFrame = Frame(mImGray, timestamp, mpIniORBextractor, mpORBVocabulary, mpCamera, mDistCoef, mbf, mThDepth,
-//                          &mLastFrame, *mpImuCalib);
+
+    // 直接复制，然后把彩色图像转换成灰度图像
+    cv::Mat mImGray = image;
+    cvtColor(mImGray,mImGray,CV_RGBA2GRAY);
+    // 从图像中回复时间戳
+    double tframe = 123456789;
+    double timestamp = tframe;
+    mCurrentFrame = Frame(mImGray, timestamp, mpIniORBextractor, mpORBVocabulary, mpCamera, mDistCoef, mbf, mThDepth,
+                          &mLastFrame, *mpImuCalib);
 
     return 0;
 }
