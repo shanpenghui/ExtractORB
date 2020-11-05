@@ -13,7 +13,6 @@ int main(int argc, char **argv) {
     // Google log
     google::InitGoogleLogging(argv[0]);
     google::SetLogDestination(google::GLOG_INFO, "../log/log_");
-    google::SetStderrLogging(google::GLOG_WARNING);
 
     // 读取图像
     string image_file_path = "../pic/TUM/dataset-room4_512_16/mav0/cam0/data/1520531124150444163.png";
@@ -42,9 +41,20 @@ int main(int argc, char **argv) {
     cout << "- Initial Fast Threshold: " << fIniThFAST << endl;
     cout << "- Minimum Fast Threshold: " << fMinThFAST << endl;
 
-    ORB_SLAM3::Frame mCurrentFrame;
-    mCurrentFrame = Frame(mImGray, timestamp, mpIniORBextractor, mpORBVocabulary, mpCamera, mDistCoef, mbf, mThDepth,
-                          &mLastFrame, *mpImuCalib);
+    mpIniORBextractor->ComputePyramid(image);
+    vector<vector<cv::KeyPoint>> allKeypoints;
+    mpIniORBextractor->ComputeKeyPointsOctTree(allKeypoints);
+
+    //统计所有层的特征点并进行尺度恢复
+    int image_total_keypoints = 0;
+    for (int level = 0; level < nLevels; ++level) {
+        image_total_keypoints += (int) allKeypoints[level].size();
+    }
+    cout << "ORB_SLAM3 has total " << image_total_keypoints << " keypoints" << endl;
+
+//    ORB_SLAM3::Frame mCurrentFrame;
+//    mCurrentFrame = Frame(mImGray, timestamp, mpIniORBextractor, mpORBVocabulary, mpCamera, mDistCoef, mbf, mThDepth,
+//                          &mLastFrame, *mpImuCalib);
 
     return 0;
 }

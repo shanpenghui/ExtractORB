@@ -83,7 +83,7 @@ public:
 
     std::vector<cv::Mat> mvImagePyramid;
 
-protected:
+//protected:
 
     void ComputePyramid(cv::Mat image);
     void ComputeKeyPointsOctTree(std::vector<std::vector<cv::KeyPoint> >& allKeypoints);    

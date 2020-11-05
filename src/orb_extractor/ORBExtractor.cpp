@@ -57,7 +57,7 @@ ORBextractor::ORBextractor(int _nfeatures,        //指定要提取的特征点�
     float factor = 1.0f / scaleFactor;
     //每个单位缩放系数所希望的特征点个数
     float nDesiredFeaturesPerScale = nfeatures * (1 - factor) / (1 - (float) pow((double) factor, (double) nlevels));
-    cout << "nDesiredFeaturesPerScale = " << nDesiredFeaturesPerScale << endl;
+//    cout << "nDesiredFeaturesPerScale = " << nDesiredFeaturesPerScale << endl;
     //用于在特征点个数分配的，特征点的累计计数清空
     int sumFeatures = 0;
     //开始逐层计算要分配的特征点个数，顶层图像除外（看循环后面）
@@ -125,7 +125,7 @@ void ORBextractor::ComputePyramid(cv::Mat image) {
     for (int level = 0; level < nlevels; ++level) {
         //获取本层图像的缩放系数
         float scale = mvInvScaleFactor[level];
-        cout << "本层图像的缩放系数 = " << scale << endl;
+//        cout << "本层图像的缩放系数 = " << scale << endl;
         //计算本层图像的像素尺寸大小
         Size sz(cvRound((float) image.cols * scale), cvRound((float) image.rows * scale));
         //全尺寸图像。包括无效图像区域的大小。将图像进行“补边”，EDGE_THRESHOLD区域外的图像不进行FAST角点检测
@@ -272,7 +272,7 @@ void ORBextractor::ComputeKeyPointsOctTree(
         vector<vector<KeyPoint> > &allKeypoints)    //所有的特征点，这里第一层vector存储的是某图层里面的所有特征点，
 //第二层存储的是整个图像金字塔中的所有图层里面的所有特征点
 {
-    LOG(INFO) << __PRETTY_FUNCTION__ << " start";
+//    LOG(INFO) << __PRETTY_FUNCTION__ << " start";
 
     //重新调整图像层数
     allKeypoints.resize(nlevels);
@@ -289,10 +289,10 @@ void ORBextractor::ComputeKeyPointsOctTree(
         const int maxBorderX = mvImagePyramid[level].cols - EDGE_THRESHOLD + 3;
         const int maxBorderY = mvImagePyramid[level].rows - EDGE_THRESHOLD + 3;
 
-        cout << "minBorderX = " << minBorderX
-             << " minBorderY = " << minBorderY
-             << " maxBorderX = " << maxBorderX
-             << " maxBorderY = " << maxBorderY << endl;
+//        cout << "minBorderX = " << minBorderX
+//             << " minBorderY = " << minBorderY
+//             << " maxBorderX = " << maxBorderX
+//             << " maxBorderY = " << maxBorderY << endl;
         //存储需要进行平均分配的特征点
         vector<cv::KeyPoint> vToDistributeKeys;
         //一般地都是过量采集，所以这里预分配的空间大小是nfeatures*10
@@ -311,9 +311,9 @@ void ORBextractor::ComputeKeyPointsOctTree(
         const int wCell = ceil(width / nCols);
         const int hCell = ceil(height / nRows);
 
-        LOG(INFO) << __PRETTY_FUNCTION__ << " 第 " << level + 1 << " 层图像的像素宽 " << width << " 高 " << height << ", 每个格子宽 "
-                  << wCell << " 高 " << hCell
-                  << " 像素, 被切割成 " << nRows << " 行 " << nCols << " 列, ";
+//        LOG(INFO) << __PRETTY_FUNCTION__ << " 第 " << level + 1 << " 层图像的像素宽 " << width << " 高 " << height << ", 每个格子宽 "
+//                  << wCell << " 高 " << hCell
+//                  << " 像素, 被切割成 " << nRows << " 行 " << nCols << " 列, ";
 
 #ifdef SHOW_DIVIDE_IMAGE
         Mat tmp = mvImagePyramid[level];
@@ -377,8 +377,8 @@ void ORBextractor::ComputeKeyPointsOctTree(
                          vKeysCell,        //存储角点位置的容器
                          minThFAST,        //更低的检测阈值
                          true);            //使能非极大值抑制
-                    LOG(INFO) << __PRETTY_FUNCTION__ << " 第 " << i + 1 << " 行, 第 " << j + 1 << " 列 第 " << level + 1
-                              << " 层图像特征点数量为 " << vKeysCell.size();
+//                    LOG(INFO) << __PRETTY_FUNCTION__ << " 第 " << i + 1 << " 行, 第 " << j + 1 << " 列 第 " << level + 1
+//                              << " 层图像特征点数量为 " << vKeysCell.size();
                 }
 
                 //当图像cell中检测到FAST角点的时候执行下面的语句
@@ -395,8 +395,8 @@ void ORBextractor::ComputeKeyPointsOctTree(
                     }//遍历图像cell中的所有的提取出来的FAST角点，并且恢复其在整个金字塔当前层图像下的坐标
                 }//当图像cell中检测到FAST角点的时候执行下面的语句
                 else {
-                    LOG(INFO) << __PRETTY_FUNCTION__ << " 第 " << i + 1 << " 行, 第 " << j + 1 << " 列 第 " << level + 1
-                              << " 层图像特征点数量为 0";
+//                    LOG(INFO) << __PRETTY_FUNCTION__ << " 第 " << i + 1 << " 行, 第 " << j + 1 << " 列 第 " << level + 1
+//                              << " 层图像特征点数量为 0";
                 }
 
             }//开始遍历图像cell的列
@@ -444,7 +444,7 @@ void ORBextractor::ComputeKeyPointsOctTree(
         computeOrientation(mvImagePyramid[level],    //对应的图层的图像
                            allKeypoints[level],    //这个图层中提取并保留下来的特征点容器
                            umax);                    //以及PATCH的横坐标边界
-    LOG(INFO) << __PRETTY_FUNCTION__ << " end";
+//    LOG(INFO) << __PRETTY_FUNCTION__ << " end";
 }
 
 // 自己添加的函数，显示各层金字塔的图像和特征点提取结果
@@ -493,7 +493,7 @@ vector<cv::KeyPoint> ORBextractor::DistributeOctTree(const vector<cv::KeyPoint> 
     //然后重新设置其大小
     vpIniNodes.resize(nIni);
 
-    cout << "nIni = " << nIni << " hX = " << hX << endl;
+//    cout << "nIni = " << nIni << " hX = " << hX << endl;
     // Step 2 生成初始提取器节点
     for (int i = 0; i < nIni; i++) {
         //生成一个提取器节点
@@ -515,12 +515,12 @@ vector<cv::KeyPoint> ORBextractor::DistributeOctTree(const vector<cv::KeyPoint> 
         lNodes.push_back(ni);
         //存储这个初始的提取器节点句柄
         vpIniNodes[i] = &lNodes.back();
-        cout << " ni.UL = " << ni.UL
-             << " ni.UR = " << ni.UR
-             << " ni.BL = " << ni.BL
-             << " ni.BR = " << ni.BR
-             << " vpIniNodes.size() = " << vpIniNodes.size()
-             << endl;
+//        cout << " ni.UL = " << ni.UL
+//             << " ni.UR = " << ni.UR
+//             << " ni.BL = " << ni.BL
+//             << " ni.BR = " << ni.BR
+//             << " vpIniNodes.size() = " << vpIniNodes.size()
+//             << endl;
     }
 
     //Associate points to childs
@@ -1035,7 +1035,7 @@ int ORBextractor::operator()(InputArray _image, InputArray _mask, vector<KeyPoin
     //Modified for speeding up stereo fisheye matching
     int monoIndex = 0, stereoIndex = nkeypoints - 1;
     //开始遍历每一层图像
-    cout << "nlevels = " << nlevels << endl;
+//    cout << "nlevels = " << nlevels << endl;
     for (int level = 0; level < nlevels; ++level) {
         //获取在allKeypoints中当前层特征点容器的句柄
         vector<KeyPoint> &keypoints = allKeypoints[level];
@@ -1064,7 +1064,7 @@ int ORBextractor::operator()(InputArray _image, InputArray _mask, vector<KeyPoin
                            desc,        //存储计算之后的描述子
                            pattern);    //随机采样点集
 
-        cout << "keypoints.size() = " << keypoints.size() << endl;
+//        cout << "keypoints.size() = " << keypoints.size() << endl;
         // 更新偏移量的值
         offset += nkeypointsLevel;
 
