@@ -62,6 +62,30 @@ target_link_libraries(
         ${OpenCV_LIBS} glog::glog
 )
 
+add_executable(
+        frame
+        src/matcher/main_frame.cpp
+        src/orb_extractor/ORBextractor.cc
+        src/Frame.cc
+        src/ImuTypes.cc
+        src/Converter.cc
+        src/G2oTypes.cc
+        src/MapPoint.cc
+        src/Map.cc
+        src/ORBmatcher.cc
+        src/KeyFrame.cc
+        src/CameraModels/KannalaBrandt8.cpp
+        src/CameraModels/Pinhole.cpp
+        src/TwoViewReconstruction.cc
+        src/KeyFrameDatabase.cc
+)
+target_link_libraries(
+        frame
+        ${OpenCV_LIBS} glog::glog ${EIGEN3_LIBS} ${Pangolin_LIBRARIES}
+        ${PROJECT_SOURCE_DIR}/Thirdparty/DBoW2/lib/libDBoW2.so
+        ${PROJECT_SOURCE_DIR}/Thirdparty/g2o/lib/libg2o.so
+)
+
 #add_executable(
 #        undistort
 #        src/undistort/main_undistort.cpp
