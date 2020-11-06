@@ -16,44 +16,42 @@
 * If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "TwoViewReconstruction.h"
+#include "Initializer.h"
 
 #include "Thirdparty/DBoW2/DUtils/Random.h"
 
+#include "Optimizer.h"
+#include "ORBmatcher.h"
+
 #include<thread>
+#include <Pinhole.h>
 
-
-using namespace std;
 namespace ORB_SLAM3
 {
 
-TwoViewReconstruction::TwoViewReconstruction(cv::Mat& K, float sigma, int iterations)
+Initializer::Initializer(const Frame &ReferenceFrame, float sigma, int iterations)
 {
-    mK = K.clone();
+    mpCamera = ReferenceFrame.mpCamera;
+    mK = ReferenceFrame.mK.clone();
+
+    mvKeys1 = ReferenceFrame.mvKeysUn;
 
     mSigma = sigma;
     mSigma2 = sigma*sigma;
     mMaxIterations = iterations;
 }
 
-bool TwoViewReconstruction::Reconstruct(const std::vector<cv::KeyPoint>& vKeys1, const std::vector<cv::KeyPoint>& vKeys2, const vector<int> &vMatches12,
-                                        cv::Mat &R21, cv::Mat &t21, vector<cv::Point3f> &vP3D, vector<bool> &vbTriangulated)
+bool Initializer::Initialize(const Frame &CurrentFrame, const vector<int> &vMatches12, cv::Mat &R21, cv::Mat &t21,
+                             vector<cv::Point3f> &vP3D, vector<bool> &vbTriangulated)
 {
-    LOG(INFO);
-    mvKeys1.clear();
-    mvKeys2.clear();
 
-    mvKeys1 = vKeys1;
-    mvKeys2 = vKeys2;
+    mvKeys2 = CurrentFrame.mvKeysUn;
 
-    // Fill structures with current keypoints and matches with reference frame
-    // Reference Frame: 1, Current Frame: 2
     mvMatches12.clear();
     mvMatches12.reserve(mvKeys2.size());
     mvbMatched1.resize(mvKeys1.size());
     for(size_t i=0, iend=vMatches12.size();i<iend; i++)
     {
-        LOG_FIRST_N(INFO, 1);
         if(vMatches12[i]>=0)
         {
             mvMatches12.push_back(make_pair(i,vMatches12[i]));
@@ -63,19 +61,18 @@ bool TwoViewReconstruction::Reconstruct(const std::vector<cv::KeyPoint>& vKeys1,
             mvbMatched1[i]=false;
     }
 
+
+
     const int N = mvMatches12.size();
 
-    // Indices for minimum set selection
     vector<size_t> vAllIndices;
     vAllIndices.reserve(N);
     vector<size_t> vAvailableIndices;
 
     for(int i=0; i<N; i++)
     {
-        LOG_FIRST_N(INFO, 1);
         vAllIndices.push_back(i);
     }
-
     // Generate sets of 8 points for each RANSAC iteration
     mvSets = vector< vector<size_t> >(mMaxIterations,vector<size_t>(8,0));
 
@@ -83,13 +80,11 @@ bool TwoViewReconstruction::Reconstruct(const std::vector<cv::KeyPoint>& vKeys1,
 
     for(int it=0; it<mMaxIterations; it++)
     {
-        LOG_FIRST_N(INFO, 1);
         vAvailableIndices = vAllIndices;
 
         // Select a minimum set
         for(size_t j=0; j<8; j++)
         {
-            LOG_FIRST_N(INFO, 1);
             int randi = DUtils::Random::RandomInt(0,vAvailableIndices.size()-1);
             int idx = vAvailableIndices[randi];
 
@@ -105,35 +100,40 @@ bool TwoViewReconstruction::Reconstruct(const std::vector<cv::KeyPoint>& vKeys1,
     float SH, SF;
     cv::Mat H, F;
 
-    thread threadH(&TwoViewReconstruction::FindHomography,this,ref(vbMatchesInliersH), ref(SH), ref(H));
-    thread threadF(&TwoViewReconstruction::FindFundamental,this,ref(vbMatchesInliersF), ref(SF), ref(F));
+    thread threadH(&Initializer::FindHomography,this,ref(vbMatchesInliersH), ref(SH), ref(H));
+    thread threadF(&Initializer::FindFundamental,this,ref(vbMatchesInliersF), ref(SF), ref(F));
+
+    //cout << "5" << endl;
 
     // Wait until both threads have finished
     threadH.join();
     threadF.join();
 
     // Compute ratio of scores
-    if(SH+SF == 0.f) return false;
     float RH = SH/(SH+SF);
 
-    float minParallax = 1.0;
-    LOG_FIRST_N(INFO, 1);
+    //cout << "6" << endl;
+
+    float minParallax = 1.0; // 1.0 originally
+
+    cv::Mat K = static_cast<Pinhole*>(mpCamera)->toK();
     // Try to reconstruct from homography or fundamental depending on the ratio (0.40-0.45)
-    if(RH>0.50) // if(RH>0.40)
+    if(RH>0.40) // if(RH>0.40)
     {
-        LOG_FIRST_N(INFO, 1);
         //cout << "Initialization from Homography" << endl;
-        return ReconstructH(vbMatchesInliersH,H, mK,R21,t21,vP3D,vbTriangulated,minParallax,50);
+        return ReconstructH(vbMatchesInliersH,H, K,R21,t21,vP3D,vbTriangulated,minParallax,50);
     }
     else //if(pF_HF>0.6)
     {
-        LOG_FIRST_N(INFO, 1);
         //cout << "Initialization from Fundamental" << endl;
-        return ReconstructF(vbMatchesInliersF,F,mK,R21,t21,vP3D,vbTriangulated,minParallax,50);
+        return ReconstructF(vbMatchesInliersF,F,K,R21,t21,vP3D,vbTriangulated,minParallax,50);
     }
+
+    return false;
 }
 
-void TwoViewReconstruction::FindHomography(vector<bool> &vbMatchesInliers, float &score, cv::Mat &H21)
+
+void Initializer::FindHomography(vector<bool> &vbMatchesInliers, float &score, cv::Mat &H21)
 {
     // Number of putative matches
     const int N = mvMatches12.size();
@@ -184,7 +184,7 @@ void TwoViewReconstruction::FindHomography(vector<bool> &vbMatchesInliers, float
 }
 
 
-void TwoViewReconstruction::FindFundamental(vector<bool> &vbMatchesInliers, float &score, cv::Mat &F21)
+void Initializer::FindFundamental(vector<bool> &vbMatchesInliers, float &score, cv::Mat &F21)
 {
     // Number of putative matches
     const int N = vbMatchesInliers.size();
@@ -235,7 +235,7 @@ void TwoViewReconstruction::FindFundamental(vector<bool> &vbMatchesInliers, floa
 }
 
 
-cv::Mat TwoViewReconstruction::ComputeH21(const vector<cv::Point2f> &vP1, const vector<cv::Point2f> &vP2)
+cv::Mat Initializer::ComputeH21(const vector<cv::Point2f> &vP1, const vector<cv::Point2f> &vP2)
 {
     const int N = vP1.size();
 
@@ -277,7 +277,7 @@ cv::Mat TwoViewReconstruction::ComputeH21(const vector<cv::Point2f> &vP1, const 
     return vt.row(8).reshape(0, 3);
 }
 
-cv::Mat TwoViewReconstruction::ComputeF21(const vector<cv::Point2f> &vP1,const vector<cv::Point2f> &vP2)
+cv::Mat Initializer::ComputeF21(const vector<cv::Point2f> &vP1,const vector<cv::Point2f> &vP2)
 {
     const int N = vP1.size();
 
@@ -314,7 +314,7 @@ cv::Mat TwoViewReconstruction::ComputeF21(const vector<cv::Point2f> &vP1,const v
     return  u*cv::Mat::diag(w)*vt;
 }
 
-float TwoViewReconstruction::CheckHomography(const cv::Mat &H21, const cv::Mat &H12, vector<bool> &vbMatchesInliers, float sigma)
+float Initializer::CheckHomography(const cv::Mat &H21, const cv::Mat &H12, vector<bool> &vbMatchesInliers, float sigma)
 {   
     const int N = mvMatches12.size();
 
@@ -399,7 +399,7 @@ float TwoViewReconstruction::CheckHomography(const cv::Mat &H21, const cv::Mat &
     return score;
 }
 
-float TwoViewReconstruction::CheckFundamental(const cv::Mat &F21, vector<bool> &vbMatchesInliers, float sigma)
+float Initializer::CheckFundamental(const cv::Mat &F21, vector<bool> &vbMatchesInliers, float sigma)
 {
     const int N = mvMatches12.size();
 
@@ -479,7 +479,7 @@ float TwoViewReconstruction::CheckFundamental(const cv::Mat &F21, vector<bool> &
     return score;
 }
 
-bool TwoViewReconstruction::ReconstructF(vector<bool> &vbMatchesInliers, cv::Mat &F21, cv::Mat &K,
+bool Initializer::ReconstructF(vector<bool> &vbMatchesInliers, cv::Mat &F21, cv::Mat &K,
                             cv::Mat &R21, cv::Mat &t21, vector<cv::Point3f> &vP3D, vector<bool> &vbTriangulated, float minParallax, int minTriangulated)
 {
     int N=0;
@@ -581,7 +581,7 @@ bool TwoViewReconstruction::ReconstructF(vector<bool> &vbMatchesInliers, cv::Mat
     return false;
 }
 
-bool TwoViewReconstruction::ReconstructH(vector<bool> &vbMatchesInliers, cv::Mat &H21, cv::Mat &K,
+bool Initializer::ReconstructH(vector<bool> &vbMatchesInliers, cv::Mat &H21, cv::Mat &K,
                       cv::Mat &R21, cv::Mat &t21, vector<cv::Point3f> &vP3D, vector<bool> &vbTriangulated, float minParallax, int minTriangulated)
 {
     int N=0;
@@ -742,7 +742,7 @@ bool TwoViewReconstruction::ReconstructH(vector<bool> &vbMatchesInliers, cv::Mat
     return false;
 }
 
-void TwoViewReconstruction::Triangulate(const cv::KeyPoint &kp1, const cv::KeyPoint &kp2, const cv::Mat &P1, const cv::Mat &P2, cv::Mat &x3D)
+void Initializer::Triangulate(const cv::KeyPoint &kp1, const cv::KeyPoint &kp2, const cv::Mat &P1, const cv::Mat &P2, cv::Mat &x3D)
 {
     cv::Mat A(4,4,CV_32F);
 
@@ -757,7 +757,7 @@ void TwoViewReconstruction::Triangulate(const cv::KeyPoint &kp1, const cv::KeyPo
     x3D = x3D.rowRange(0,3)/x3D.at<float>(3);
 }
 
-void TwoViewReconstruction::Normalize(const vector<cv::KeyPoint> &vKeys, vector<cv::Point2f> &vNormalizedPoints, cv::Mat &T)
+void Initializer::Normalize(const vector<cv::KeyPoint> &vKeys, vector<cv::Point2f> &vNormalizedPoints, cv::Mat &T)
 {
     float meanX = 0;
     float meanY = 0;
@@ -806,16 +806,10 @@ void TwoViewReconstruction::Normalize(const vector<cv::KeyPoint> &vKeys, vector<
 }
 
 
-int TwoViewReconstruction::CheckRT(const cv::Mat &R, const cv::Mat &t, const vector<cv::KeyPoint> &vKeys1, const vector<cv::KeyPoint> &vKeys2,
+int Initializer::CheckRT(const cv::Mat &R, const cv::Mat &t, const vector<cv::KeyPoint> &vKeys1, const vector<cv::KeyPoint> &vKeys2,
                        const vector<Match> &vMatches12, vector<bool> &vbMatchesInliers,
                        const cv::Mat &K, vector<cv::Point3f> &vP3D, float th2, vector<bool> &vbGood, float &parallax)
 {
-    // Calibration parameters
-    const float fx = K.at<float>(0,0);
-    const float fy = K.at<float>(1,1);
-    const float cx = K.at<float>(0,2);
-    const float cy = K.at<float>(1,2);
-
     vbGood = vector<bool>(vKeys1.size(),false);
     vP3D.resize(vKeys1.size());
 
@@ -875,23 +869,15 @@ int TwoViewReconstruction::CheckRT(const cv::Mat &R, const cv::Mat &t, const vec
             continue;
 
         // Check reprojection error in first image
-        float im1x, im1y;
-        float invZ1 = 1.0/p3dC1.at<float>(2);
-        im1x = fx*p3dC1.at<float>(0)*invZ1+cx;
-        im1y = fy*p3dC1.at<float>(1)*invZ1+cy;
-
-        float squareError1 = (im1x-kp1.pt.x)*(im1x-kp1.pt.x)+(im1y-kp1.pt.y)*(im1y-kp1.pt.y);
+        cv::Point2f uv1 = mpCamera->project(p3dC1);
+        float squareError1 = (uv1.x-kp1.pt.x)*(uv1.x-kp1.pt.x)+(uv1.y-kp1.pt.y)*(uv1.y-kp1.pt.y);
 
         if(squareError1>th2)
             continue;
 
         // Check reprojection error in second image
-        float im2x, im2y;
-        float invZ2 = 1.0/p3dC2.at<float>(2);
-        im2x = fx*p3dC2.at<float>(0)*invZ2+cx;
-        im2y = fy*p3dC2.at<float>(1)*invZ2+cy;
-
-        float squareError2 = (im2x-kp2.pt.x)*(im2x-kp2.pt.x)+(im2y-kp2.pt.y)*(im2y-kp2.pt.y);
+        cv::Point2f uv2 = mpCamera->project(p3dC2);
+        float squareError2 = (uv2.x-kp2.pt.x)*(uv2.x-kp2.pt.x)+(uv2.y-kp2.pt.y)*(uv2.y-kp2.pt.y);
 
         if(squareError2>th2)
             continue;
@@ -917,7 +903,7 @@ int TwoViewReconstruction::CheckRT(const cv::Mat &R, const cv::Mat &t, const vec
     return nGood;
 }
 
-void TwoViewReconstruction::DecomposeE(const cv::Mat &E, cv::Mat &R1, cv::Mat &R2, cv::Mat &t)
+void Initializer::DecomposeE(const cv::Mat &E, cv::Mat &R1, cv::Mat &R2, cv::Mat &t)
 {
     cv::Mat u,w,vt;
     cv::SVD::compute(E,w,u,vt);

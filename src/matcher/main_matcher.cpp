@@ -5,6 +5,9 @@
 #include "Frame.h"
 #include "KannalaBrandt8.h"
 #include <iostream>
+#include <opencv2/features2d.hpp>
+#include "Initializer.h"
+#include "ORBmatcher.h"
 
 using namespace std;
 
@@ -28,7 +31,7 @@ int main(int argc, char **argv) {
     cout << "- Initial Fast Threshold: " << fIniThFAST << endl;
     cout << "- Minimum Fast Threshold: " << fMinThFAST << endl;
 
-    // 1st Frame
+    //---------------------- 1st Frame
     // 读取图像
     string image_1_file_path = "../pic/robot/2195_im.jpg";
     cv::Mat image_1 = cv::imread(image_1_file_path, cv::IMREAD_GRAYSCALE);
@@ -100,7 +103,7 @@ int main(int argc, char **argv) {
     // 7.用于区分远点和近点的阈值. 近点认为可信度比较高;远点则要求在两个关键帧中得到匹配
     float mThDepth = 0;
 
-    // Frame 1
+    // Frame construct
     mCurrentFrame_1 = ORB_SLAM3::Frame(mImGray_1, timestamp_1, mpIniORBextractor, mpORBVocabulary, mpCamera, mDistCoef,
                                      mbf, mThDepth);
 
@@ -133,7 +136,18 @@ int main(int argc, char **argv) {
     drawKeypoints(image_1, out_put_all_keypoints_1, out_put_image_1);
     imshow("Image 1", out_put_image_1);
 
-    // 2st Frame
+    std::vector<cv::Point2f> mvbPrevMatched;
+    mvbPrevMatched.resize(mCurrentFrame_1.mvKeysUn.size());
+    for(size_t i=0; i<mCurrentFrame_1.mvKeysUn.size(); i++)
+        mvbPrevMatched[i]=mCurrentFrame_1.mvKeysUn[i].pt;
+
+    ORB_SLAM3::Initializer* mpInitializer;
+    mpInitializer =  new ORB_SLAM3::Initializer(mCurrentFrame_1,1.0,200);
+    std::vector<int> mvIniMatches;
+    fill(mvIniMatches.begin(),mvIniMatches.end(),-1);
+    cout << "mvIniMatches.size() = " << mvIniMatches.size() << endl;
+
+    //---------------------- 2nd Frame
     // 读取图像
     string image_2_file_path = "../pic/robot/2196_im.jpg";
     cv::Mat image_2 = cv::imread(image_2_file_path, cv::IMREAD_GRAYSCALE);
@@ -154,17 +168,17 @@ int main(int argc, char **argv) {
         image_2_total_keypoints += (int) allKeypoints_2[level].size();
     }
     cout << "Image_2 has total " << image_2_total_keypoints << " keypoints" << endl;
-
+    LOG(INFO);
     // Start Frame Constructor
     ORB_SLAM3::Frame mCurrentFrame_2;
-
+    LOG(INFO);
     // 1.直接复制，然后把彩色图像转换成灰度图像
     cv::Mat mImGray_2 = image_2;
 
     // 2.从图像中回复时间戳
     double tframe_2 = 123456789;
     double timestamp_2 = tframe_2;
-
+    LOG(INFO);
     // Frame 2
     mCurrentFrame_2 = ORB_SLAM3::Frame(mImGray_2, timestamp_2, mpIniORBextractor, mpORBVocabulary, mpCamera, mDistCoef,
                                        mbf, mThDepth);
@@ -176,6 +190,7 @@ int main(int argc, char **argv) {
         cout << "mCurrentFrame_2.mvKeys.size() <=100 Exit 0 " << endl;
         return -1;
     }
+    LOG(INFO);
 
     // Show Frame 2
     vector<cv::KeyPoint> out_put_all_keypoints_2(image_2_total_keypoints);
@@ -198,6 +213,52 @@ int main(int argc, char **argv) {
     drawKeypoints(image_2, out_put_all_keypoints_2, out_put_image_2);
     cv::imshow("Image 2", out_put_image_2);
 
+    cv::waitKey(0);
+
+    cv::Mat Rcw; // Current Camera Rotation
+    cv::Mat tcw; // Current Camera Translation
+    std::vector<cv::Point3f> mvIniP3D;
+    vector<bool> vbTriangulated; // Triangulated Correspondences (mvIniMatches)
+    LOG(INFO);
+    if(mpCamera->ReconstructWithTwoViews(mCurrentFrame_1.mvKeysUn,mCurrentFrame_2.mvKeysUn,
+                                         mvIniMatches,Rcw,tcw,mvIniP3D,vbTriangulated)){
+        cout << "ReconstructWithTwoViews success" << endl;
+    }
+    else {
+        cout << "ReconstructWithTwoViews failed" << endl;
+    }
+    LOG(INFO);
+//    return 0;
+
+    //---------------------------------------------------------------
+    // 特征匹配
+    ORB_SLAM3::ORBmatcher matcher(0.9,true);
+    int nmatches = matcher.SearchForInitialization(mCurrentFrame_1,mCurrentFrame_2,mvbPrevMatched,mvIniMatches,100);
+    cout << "2帧匹配对数是 " << nmatches << endl;
+//    vector<cv::DMatch> matches;
+//    cv::Mat imgMatcheResult;
+//    cv::drawMatches(image_1, allKeypoints_1, image_2, allKeypoints_2, matches, imgMatcheResult);
+
+    vector<int> vMatches; // Initialization: correspondeces with reference keypoints
+    vMatches = mvIniMatches;
+
+    vector<cv::KeyPoint> vIniKeys; // Initialization: KeyPoints in reference frame
+    vector<cv::KeyPoint> mvIniKeys;
+    mvIniKeys = mCurrentFrame_1.mvKeys;
+    vIniKeys = mvIniKeys;
+
+    vector<cv::KeyPoint> vCurrentKeys; // KeyPoints in current frame
+    vector<cv::KeyPoint> mvCurrentKeys;
+    mvCurrentKeys = mCurrentFrame_2.mvKeys;
+    vCurrentKeys = mvCurrentKeys;
+    for(unsigned int i=0; i<vMatches.size(); i++)
+    {
+        if(vMatches[i]>=0)
+        {
+            cv::line(image_2, vIniKeys[i].pt,vCurrentKeys[vMatches[i]].pt,
+                     cv::Scalar(0,255,0));
+        }
+    }
     cv::waitKey(0);
 
     return 0;

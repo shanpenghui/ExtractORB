@@ -22,6 +22,7 @@
 #include<opencv2/opencv.hpp>
 
 #include <unordered_set>
+#include <glog/logging.h>
 
 namespace ORB_SLAM3
 {
