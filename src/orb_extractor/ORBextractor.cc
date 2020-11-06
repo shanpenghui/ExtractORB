@@ -439,7 +439,7 @@ namespace ORB_SLAM3
         mnFeaturesPerLevel.resize(nlevels);
         float factor = 1.0f / scaleFactor;
         float nDesiredFeaturesPerScale = nfeatures*(1 - factor)/(1 - (float)pow((double)factor, (double)nlevels));
-        cout << "nDesiredFeaturesPerScale = " << nDesiredFeaturesPerScale << endl;
+//        cout << "nDesiredFeaturesPerScale = " << nDesiredFeaturesPerScale << endl;
 
         int sumFeatures = 0;
         for( int level = 0; level < nlevels-1; level++ )
@@ -548,12 +548,12 @@ namespace ORB_SLAM3
         const int nIni = round(static_cast<float>(maxX-minX)/(maxY-minY));
 
         const float hX = static_cast<float>(maxX-minX)/nIni;
-        cout << "nIni = " << nIni << " hX = " << hX << endl;
+//        cout << "nIni = " << nIni << " hX = " << hX << endl;
         list<ExtractorNode> lNodes;
 
         vector<ExtractorNode*> vpIniNodes;
         vpIniNodes.resize(nIni);
-        cout << "nIni = " << nIni << endl;
+//        cout << "nIni = " << nIni << endl;
         for(int i=0; i<nIni; i++)
         {
             ExtractorNode ni;
@@ -742,11 +742,11 @@ namespace ORB_SLAM3
                 }
             }
         }
-        cout << "iteration = " << iteration << endl;
+//        cout << "iteration = " << iteration << endl;
         // Retain the best point in each node
         vector<cv::KeyPoint> vResultKeys;
         vResultKeys.reserve(nfeatures);
-        cout << "lNodes.size() = " << lNodes.size() << endl;
+//        cout << "lNodes.size() = " << lNodes.size() << endl;
 
         for(list<ExtractorNode>::iterator lit=lNodes.begin(); lit!=lNodes.end(); lit++)
         {
@@ -765,7 +765,7 @@ namespace ORB_SLAM3
 
             vResultKeys.push_back(*pKP);
         }
-        cout << "vResultKeys.size() = " << vResultKeys.size() << endl;
+//        cout << "vResultKeys.size() = " << vResultKeys.size() << endl;
 
         return vResultKeys;
     }
@@ -774,7 +774,7 @@ void ORBextractor::ComputeKeyPointsOctTree(
     vector<vector<KeyPoint> > &allKeypoints)    //所有的特征点，这里第一层vector存储的是某图层里面的所有特征点，
 //第二层存储的是整个图像金字塔中的所有图层里面的所有特征点
 {
-    LOG(INFO) << __PRETTY_FUNCTION__ << " start";
+//    LOG(INFO) << __PRETTY_FUNCTION__ << " start";
 
     //重新调整图像层数
     allKeypoints.resize(nlevels);
@@ -791,10 +791,10 @@ void ORBextractor::ComputeKeyPointsOctTree(
         const int maxBorderX = mvImagePyramid[level].cols - EDGE_THRESHOLD + 3;
         const int maxBorderY = mvImagePyramid[level].rows - EDGE_THRESHOLD + 3;
 
-        cout << "minBorderX = " << minBorderX
-             << " minBorderY = " << minBorderY
-             << " maxBorderX = " << maxBorderX
-             << " maxBorderY = " << maxBorderY << endl;
+//        cout << "minBorderX = " << minBorderX
+//             << " minBorderY = " << minBorderY
+//             << " maxBorderX = " << maxBorderX
+//             << " maxBorderY = " << maxBorderY << endl;
         //存储需要进行平均分配的特征点
         vector<cv::KeyPoint> vToDistributeKeys;
         //一般地都是过量采集，所以这里预分配的空间大小是nfeatures*10
@@ -813,9 +813,9 @@ void ORBextractor::ComputeKeyPointsOctTree(
         const int wCell = ceil(width / nCols);
         const int hCell = ceil(height / nRows);
 
-        LOG(INFO) << __PRETTY_FUNCTION__ << " 第 " << level + 1 << " 层图像的像素宽 " << width << " 高 " << height << ", 每个格子宽 "
-                  << wCell << " 高 " << hCell
-                  << " 像素, 被切割成 " << nRows << " 行 " << nCols << " 列, ";
+//        LOG(INFO) << __PRETTY_FUNCTION__ << " 第 " << level + 1 << " 层图像的像素宽 " << width << " 高 " << height << ", 每个格子宽 "
+//                  << wCell << " 高 " << hCell
+//                  << " 像素, 被切割成 " << nRows << " 行 " << nCols << " 列, ";
 
 #ifdef SHOW_DIVIDE_IMAGE
         Mat tmp = mvImagePyramid[level];
@@ -879,8 +879,8 @@ void ORBextractor::ComputeKeyPointsOctTree(
                          vKeysCell,        //存储角点位置的容器
                          minThFAST,        //更低的检测阈值
                          true);            //使能非极大值抑制
-                    LOG(INFO) << __PRETTY_FUNCTION__ << " 第 " << i + 1 << " 行, 第 " << j + 1 << " 列 第 " << level + 1
-                              << " 层图像特征点数量为 " << vKeysCell.size();
+//                    LOG(INFO) << __PRETTY_FUNCTION__ << " 第 " << i + 1 << " 行, 第 " << j + 1 << " 列 第 " << level + 1
+//                              << " 层图像特征点数量为 " << vKeysCell.size();
                 }
 
                 //当图像cell中检测到FAST角点的时候执行下面的语句
@@ -897,8 +897,8 @@ void ORBextractor::ComputeKeyPointsOctTree(
                     }//遍历图像cell中的所有的提取出来的FAST角点，并且恢复其在整个金字塔当前层图像下的坐标
                 }//当图像cell中检测到FAST角点的时候执行下面的语句
                 else {
-                    LOG(INFO) << __PRETTY_FUNCTION__ << " 第 " << i + 1 << " 行, 第 " << j + 1 << " 列 第 " << level + 1
-                              << " 层图像特征点数量为 0";
+//                    LOG(INFO) << __PRETTY_FUNCTION__ << " 第 " << i + 1 << " 行, 第 " << j + 1 << " 列 第 " << level + 1
+//                              << " 层图像特征点数量为 0";
                 }
 
             }//开始遍历图像cell的列
@@ -946,7 +946,7 @@ void ORBextractor::ComputeKeyPointsOctTree(
         computeOrientation(mvImagePyramid[level],    //对应的图层的图像
                            allKeypoints[level],    //这个图层中提取并保留下来的特征点容器
                            umax);                    //以及PATCH的横坐标边界
-    LOG(INFO) << __PRETTY_FUNCTION__ << " end";
+//    LOG(INFO) << __PRETTY_FUNCTION__ << " end";
 }
     void ORBextractor::ComputeKeyPointsOld(std::vector<std::vector<KeyPoint> > &allKeypoints)
     {
@@ -1189,7 +1189,7 @@ void ORBextractor::ComputeKeyPointsOctTree(
             //Mat desc = descriptors.rowRange(offset, offset + nkeypointsLevel);
             Mat desc = cv::Mat(nkeypointsLevel, 32, CV_8U);
             computeDescriptors(workingMat, keypoints, desc, pattern);
-            cout << "keypoints.size() = " << keypoints.size() << endl;
+//            cout << "keypoints.size() = " << keypoints.size() << endl;
             offset += nkeypointsLevel;
 
 
@@ -1225,7 +1225,7 @@ void ORBextractor::ComputePyramid(cv::Mat image) {
     for (int level = 0; level < nlevels; ++level) {
         //获取本层图像的缩放系数
         float scale = mvInvScaleFactor[level];
-        cout << "本层图像的缩放系数 = " << scale << endl;
+//        cout << "本层图像的缩放系数 = " << scale << endl;
         //计算本层图像的像素尺寸大小
         Size sz(cvRound((float) image.cols * scale), cvRound((float) image.rows * scale));
         //全尺寸图像。包括无效图像区域的大小。将图像进行“补边”，EDGE_THRESHOLD区域外的图像不进行FAST角点检测

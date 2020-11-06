@@ -289,14 +289,14 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor* extra
     mvLevelSigma2 = mpORBextractorLeft->GetScaleSigmaSquares();
     mvInvLevelSigma2 = mpORBextractorLeft->GetInverseScaleSigmaSquares();
 
-    cout << "mnScaleLevels = " << mnScaleLevels
-         << " mfScaleFactor = " << mfScaleFactor
-         << " mfLogScaleFactor = " << mfLogScaleFactor
-         << " mvScaleFactors.size() = " << mvScaleFactors.size()
-         << " mvInvScaleFactors.size() = " << mvInvScaleFactors.size()
-         << " mvLevelSigma2.size() = " << mvLevelSigma2.size()
-         << " mvInvLevelSigma2.size() = " << mvInvLevelSigma2.size()
-         << endl;
+//    cout << "mnScaleLevels = " << mnScaleLevels
+//         << " mfScaleFactor = " << mfScaleFactor
+//         << " mfLogScaleFactor = " << mfLogScaleFactor
+//         << " mvScaleFactors.size() = " << mvScaleFactors.size()
+//         << " mvInvScaleFactors.size() = " << mvInvScaleFactors.size()
+//         << " mvLevelSigma2.size() = " << mvLevelSigma2.size()
+//         << " mvInvLevelSigma2.size() = " << mvInvLevelSigma2.size()
+//         << endl;
 
     // ORB extraction
 #ifdef SAVE_TIMES
@@ -385,7 +385,7 @@ void Frame::AssignFeaturesToGrid()
 
     int nReserve = 0.5f*N/(nCells);
 
-    LOG(INFO) << "Nleft = " << Nleft;
+//    LOG(INFO) << "Nleft = " << Nleft;
     for(unsigned int i=0; i<FRAME_GRID_COLS;i++)
         for (unsigned int j=0; j<FRAME_GRID_ROWS;j++){
             mGrid[i][j].reserve(nReserve);
@@ -395,14 +395,14 @@ void Frame::AssignFeaturesToGrid()
         }
 
 
-    LOG(INFO) << "mvKeys.size() = " << mvKeys.size();
-    LOG(INFO) << "mvKeysRight.size() = " << mvKeysRight.size();
-    LOG(INFO) << "mvKeysUn.size() = " << mvKeysUn.size();
+//    LOG(INFO) << "mvKeys.size() = " << mvKeys.size();
+//    LOG(INFO) << "mvKeysRight.size() = " << mvKeysRight.size();
+//    LOG(INFO) << "mvKeysUn.size() = " << mvKeysUn.size();
     for(int i=0;i<N;i++)
     {
         const cv::KeyPoint &kp = (Nleft == -1) ? mvKeysUn[i]
-                                                 : (i < Nleft) ? mvKeys[i]
-                                                                 : mvKeysRight[i - Nleft];
+                                               : (i < Nleft) ? mvKeys[i]
+                                                             : mvKeysRight[i - Nleft];
 
         int nGridPosX, nGridPosY;
         if(PosInGrid(kp,nGridPosX,nGridPosY)){
@@ -417,11 +417,12 @@ void Frame::AssignFeaturesToGrid()
 void Frame::ExtractORB(int flag, const cv::Mat &im, const int x0, const int x1)
 {
     vector<int> vLapping = {x0,x1};
-    LOG(INFO) << "x0 = " << x0 << " x1 = " << x1 << " flag = " << flag;
+    LOG_FIRST_N(INFO, 1) << "x0 = " << x0 << " x1 = " << x1 << " flag = " << flag;
     if(flag==0)
         monoLeft = (*mpORBextractorLeft)(im,cv::Mat(),mvKeys,mDescriptors,vLapping);
     else
         monoRight = (*mpORBextractorRight)(im,cv::Mat(),mvKeysRight,mDescriptorsRight,vLapping);
+//    LOG(INFO) << "mvKeys = " << mvKeys.size();
 }
 
 void Frame::SetPose(cv::Mat Tcw)
@@ -747,7 +748,7 @@ void Frame::UndistortKeyPoints()
 {
     if(mDistCoef.at<float>(0)==0.0)
     {
-        LOG(INFO) << "mDistCoef.at<float>(0)==0.0";
+//        LOG(INFO) << "mDistCoef.at<float>(0)==0.0";
         mvKeysUn=mvKeys;
         return;
     }
@@ -1041,8 +1042,8 @@ void Frame::setIntegrated()
 }
 
 Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeStamp, ORBextractor* extractorLeft, ORBextractor* extractorRight, ORBVocabulary* voc, cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth, GeometricCamera* pCamera, GeometricCamera* pCamera2, cv::Mat& Tlr,Frame* pPrevF, const IMU::Calib &ImuCalib)
-        :mpcpi(NULL), mpORBvocabulary(voc),mpORBextractorLeft(extractorLeft),mpORBextractorRight(extractorRight), mTimeStamp(timeStamp), mK(K.clone()), mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth),
-         mImuCalib(ImuCalib), mpImuPreintegrated(NULL), mpPrevFrame(pPrevF),mpImuPreintegratedFrame(NULL), mpReferenceKF(static_cast<KeyFrame*>(NULL)), mbImuPreintegrated(false), mpCamera(pCamera), mpCamera2(pCamera2), mTlr(Tlr)
+    :mpcpi(NULL), mpORBvocabulary(voc),mpORBextractorLeft(extractorLeft),mpORBextractorRight(extractorRight), mTimeStamp(timeStamp), mK(K.clone()), mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth),
+     mImuCalib(ImuCalib), mpImuPreintegrated(NULL), mpPrevFrame(pPrevF),mpImuPreintegratedFrame(NULL), mpReferenceKF(static_cast<KeyFrame*>(NULL)), mbImuPreintegrated(false), mpCamera(pCamera), mpCamera2(pCamera2), mTlr(Tlr)
 {
     std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now();
     imgLeft = imLeft.clone();
