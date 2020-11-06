@@ -99,3 +99,27 @@ target_link_libraries(
 #        ${PROJECT_SOURCE_DIR}/Thirdparty/DBoW2/lib/libDBoW2.so
 #        ${PROJECT_SOURCE_DIR}/Thirdparty/g2o/lib/libg2o.so
 #        )
+
+add_executable(
+        matcher
+        src/matcher/main_matcher.cpp
+        src/orb_extractor/ORBextractor.cc
+        src/Frame.cc
+        src/ImuTypes.cc
+        src/Converter.cc
+        src/G2oTypes.cc
+        src/MapPoint.cc
+        src/Map.cc
+        src/ORBmatcher.cc
+        src/KeyFrame.cc
+        src/CameraModels/KannalaBrandt8.cpp
+        src/CameraModels/Pinhole.cpp
+        src/TwoViewReconstruction.cc
+        src/KeyFrameDatabase.cc
+)
+target_link_libraries(
+        matcher
+        ${OpenCV_LIBS} glog::glog ${EIGEN3_LIBS} ${Pangolin_LIBRARIES}
+        ${PROJECT_SOURCE_DIR}/Thirdparty/DBoW2/lib/libDBoW2.so
+        ${PROJECT_SOURCE_DIR}/Thirdparty/g2o/lib/libg2o.so
+)
