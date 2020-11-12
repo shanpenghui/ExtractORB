@@ -11,6 +11,68 @@
 
 using namespace std;
 
+bool match(const cv::Mat &descriptors1, const cv::Mat &descriptors2,std::vector<cv::DMatch> &result) {
+
+    //Simple OpenCV BF matcher
+    cv::BFMatcher matcher(cv::NORM_HAMMING2);
+    matcher.match(descriptors1,descriptors2,result);
+    if (result.size() < 10)
+    {
+        std::cout<<"Matches too less !"<<std::endl;
+        return false;
+    } else{
+        return true;
+    }
+}
+
+void match_bf(const cv::Mat& img1,const cv::Mat& img2)
+{
+    cv::Mat des1,des2;
+
+    //Feature Detect
+    vector<cv::KeyPoint> keypoints1,keypoints2;
+    ORB_SLAM3::ORBextractor detector = ORB_SLAM3::ORBextractor(2000,1.2,8,20,7);
+
+    vector<int> vLapping = {0, 1000};
+    detector(img1,cv::Mat(),keypoints1,des1,vLapping);
+    detector(img2,cv::Mat(),keypoints2,des2,vLapping);
+
+    //BF match
+    vector<cv::DMatch> simple_matches;
+    vector<cv::DMatch> cross_matches;
+    vector<cv::DMatch> lowe_matches;
+
+//    ORBmatcherBF matcher;
+
+    match(des1,des2,simple_matches);
+//    matcher.match_cross_verify(des1,des2,cross_matches);
+//    matcher.match_lowe_ratio(des1,des2,0.8,lowe_matches);
+
+    string str;
+    //Draw Match Reuslt
+    cv::Mat simple,cross,lowe;
+    cv::drawMatches(img1,keypoints1,img2,keypoints2,simple_matches,simple);
+//    str="ORB_simple_bf: "+to_string(simple_matches.size());
+//    cv::putText(simple,str,cv::Point(150,150),cv::FONT_HERSHEY_DUPLEX,3.0,cv::Scalar(255,255,0));
+
+//    cv::drawMatches(img1,keypoints1,img2,keypoints2,cross_matches,cross);
+//    str="ORB_cross: "+to_string(cross_matches.size());
+//    cv::putText(cross,str,cv::Point(150,150),cv::FONT_HERSHEY_DUPLEX,3.0,cv::Scalar(255,255,0));
+
+//    cv::drawMatches(img1,keypoints1,img2,keypoints2,lowe_matches,lowe);
+//    str="ORB_lowe: "+to_string(lowe_matches.size());
+//    cv::putText(lowe,str,cv::Point(150,150),cv::FONT_HERSHEY_DUPLEX,3.0,cv::Scalar(255,255,0));
+
+    cv::namedWindow("ORB_simple_bf",0);
+    cv::imshow("ORB_simple_bf",simple);
+//    cv::namedWindow("ORB_cross",0);
+//    cv::imshow("ORB_cross",cross);
+//    cv::namedWindow("ORB_lowe",0);
+//    cv::imshow("ORB_lowe",lowe);
+
+    cv::waitKey(0);
+}
+
 int main(int argc, char **argv) {
 
     // Google log
@@ -33,7 +95,7 @@ int main(int argc, char **argv) {
 
     //---------------------- 1st Frame
     // 读取图像
-    string image_1_file_path = "../pic/robot/2195_im.jpg";
+    string image_1_file_path = "../pic/robot/866_im.jpg";
     cv::Mat image_1 = cv::imread(image_1_file_path, cv::IMREAD_GRAYSCALE);
     if (image_1.empty()) {
         cout << "The " << image_1_file_path << " was not found, please check if it existed." << endl;
@@ -147,9 +209,11 @@ int main(int argc, char **argv) {
     fill(mvIniMatches.begin(),mvIniMatches.end(),-1);
     cout << "mvIniMatches.size() = " << mvIniMatches.size() << endl;
 
+    cv::Mat descriptors_1 = mCurrentFrame_1.mDescriptors;
+
     //---------------------- 2nd Frame
     // 读取图像
-    string image_2_file_path = "../pic/robot/2196_im.jpg";
+    string image_2_file_path = "../pic/robot/867_im.jpg";
     cv::Mat image_2 = cv::imread(image_2_file_path, cv::IMREAD_GRAYSCALE);
     if (image_2.empty()) {
         cout << "The " << image_2_file_path << " was not found, please check if it existed." << endl;
@@ -212,7 +276,31 @@ int main(int argc, char **argv) {
     cv::Mat out_put_image_2;
     drawKeypoints(image_2, out_put_all_keypoints_2, out_put_image_2);
     cv::imshow("Image 2", out_put_image_2);
+    cv::waitKey(0);
 
+    cv::Mat descriptors_2 = mCurrentFrame_2.mDescriptors;
+
+    //---------------------------------------------------------------
+    // 特征匹配
+    ORB_SLAM3::ORBmatcher matcher(0.9,true);
+    int nmatches = matcher.SearchForInitialization(mCurrentFrame_1,mCurrentFrame_2,mvbPrevMatched,mvIniMatches,100);
+    cout << "2帧匹配对数是 " << nmatches << endl;
+
+    //---------------------------------------------------------------
+    vector<cv::DMatch> matches;
+    cv::BFMatcher BFmatcher;
+    BFmatcher.match(descriptors_1, descriptors_2, matches);
+
+    cout << "mCurrentFrame_1.mvKeys.size() = " << mCurrentFrame_1.mvKeys.size()
+            << " mCurrentFrame_2.mvKeys.size() = " << mCurrentFrame_2.mvKeys.size()
+            << " matches.size() = " << matches.size()
+            << endl;
+    cv::Mat out_put_match_image;
+    cv::drawMatches(image_1, mCurrentFrame_1.mvKeys,
+                    image_2, mCurrentFrame_2.mvKeys,
+                    matches, out_put_match_image);
+    cv::namedWindow("ORB drawMatches",0);
+    cv::imshow("ORB drawMatches", out_put_match_image);
     cv::waitKey(0);
 
     cv::Mat Rcw; // Current Camera Rotation
@@ -229,15 +317,6 @@ int main(int argc, char **argv) {
     }
     LOG(INFO);
 //    return 0;
-
-    //---------------------------------------------------------------
-    // 特征匹配
-    ORB_SLAM3::ORBmatcher matcher(0.9,true);
-    int nmatches = matcher.SearchForInitialization(mCurrentFrame_1,mCurrentFrame_2,mvbPrevMatched,mvIniMatches,100);
-    cout << "2帧匹配对数是 " << nmatches << endl;
-//    vector<cv::DMatch> matches;
-//    cv::Mat imgMatcheResult;
-//    cv::drawMatches(image_1, allKeypoints_1, image_2, allKeypoints_2, matches, imgMatcheResult);
 
     vector<int> vMatches; // Initialization: correspondeces with reference keypoints
     vMatches = mvIniMatches;
