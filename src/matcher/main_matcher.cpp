@@ -262,7 +262,6 @@ int main(int argc, char **argv) {
         cout << "mCurrentFrame_2.mvKeys.size() <=100 Exit 0 " << endl;
         return -1;
     }
-    LOG(INFO);
 
     // Show Frame 2
     vector<cv::KeyPoint> out_put_all_keypoints_2(image_2_total_keypoints);
