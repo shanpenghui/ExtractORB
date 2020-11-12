@@ -103,6 +103,11 @@ int main(int argc, char **argv) {
     } else
         cout << "The " << image_1_file_path << " image_1 load successed!" << endl;
 
+    cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE(3.0, cv::Size(8, 8));
+    cv::Mat im_clahe;
+    clahe->apply(image_1, im_clahe);
+    image_1 = im_clahe;
+
     ORB_SLAM3::ORBextractor *mpIniORBextractor = new ORB_SLAM3::ORBextractor(5 * nFeatures, fScaleFactor, nLevels,
                                                                              fIniThFAST, fMinThFAST);
 
@@ -207,7 +212,6 @@ int main(int argc, char **argv) {
     mpInitializer =  new ORB_SLAM3::Initializer(mCurrentFrame_1,1.0,200);
     std::vector<int> mvIniMatches;
     fill(mvIniMatches.begin(),mvIniMatches.end(),-1);
-    cout << "mvIniMatches.size() = " << mvIniMatches.size() << endl;
 
     cv::Mat descriptors_1 = mCurrentFrame_1.mDescriptors;
 
@@ -221,6 +225,10 @@ int main(int argc, char **argv) {
     } else
         cout << "The " << image_2_file_path << " image_2 load successed!" << endl;
 
+    cv::Mat im_clahe_2;
+    clahe->apply(image_2, im_clahe_2);
+    image_2 = im_clahe_2;
+
     // Extract Keypoints
     mpIniORBextractor->ComputePyramid(image_2);
     vector<vector<cv::KeyPoint>> allKeypoints_2;
@@ -232,17 +240,17 @@ int main(int argc, char **argv) {
         image_2_total_keypoints += (int) allKeypoints_2[level].size();
     }
     cout << "Image_2 has total " << image_2_total_keypoints << " keypoints" << endl;
-    LOG(INFO);
+
     // Start Frame Constructor
     ORB_SLAM3::Frame mCurrentFrame_2;
-    LOG(INFO);
+
     // 1.直接复制，然后把彩色图像转换成灰度图像
     cv::Mat mImGray_2 = image_2;
 
     // 2.从图像中回复时间戳
     double tframe_2 = 123456789;
     double timestamp_2 = tframe_2;
-    LOG(INFO);
+
     // Frame 2
     mCurrentFrame_2 = ORB_SLAM3::Frame(mImGray_2, timestamp_2, mpIniORBextractor, mpORBVocabulary, mpCamera, mDistCoef,
                                        mbf, mThDepth);
@@ -307,7 +315,7 @@ int main(int argc, char **argv) {
     cv::Mat tcw; // Current Camera Translation
     std::vector<cv::Point3f> mvIniP3D;
     vector<bool> vbTriangulated; // Triangulated Correspondences (mvIniMatches)
-    LOG(INFO);
+
     if(mpCamera->ReconstructWithTwoViews(mCurrentFrame_1.mvKeysUn,mCurrentFrame_2.mvKeysUn,
                                          mvIniMatches,Rcw,tcw,mvIniP3D,vbTriangulated)){
         cout << "ReconstructWithTwoViews success" << endl;
@@ -315,8 +323,6 @@ int main(int argc, char **argv) {
     else {
         cout << "ReconstructWithTwoViews failed" << endl;
     }
-    LOG(INFO);
-//    return 0;
 
     vector<int> vMatches; // Initialization: correspondeces with reference keypoints
     vMatches = mvIniMatches;

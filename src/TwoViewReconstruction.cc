@@ -39,12 +39,13 @@ TwoViewReconstruction::TwoViewReconstruction(cv::Mat& K, float sigma, int iterat
 bool TwoViewReconstruction::Reconstruct(const std::vector<cv::KeyPoint>& vKeys1, const std::vector<cv::KeyPoint>& vKeys2, const vector<int> &vMatches12,
                                         cv::Mat &R21, cv::Mat &t21, vector<cv::Point3f> &vP3D, vector<bool> &vbTriangulated)
 {
-    LOG(INFO);
     mvKeys1.clear();
     mvKeys2.clear();
 
     mvKeys1 = vKeys1;
     mvKeys2 = vKeys2;
+//    LOG(INFO) << "mvKeys1.size() = " << mvKeys1.size()
+//              << " mvKeys2.size() = " << mvKeys2.size();
 
     // Fill structures with current keypoints and matches with reference frame
     // Reference Frame: 1, Current Frame: 2
@@ -53,7 +54,6 @@ bool TwoViewReconstruction::Reconstruct(const std::vector<cv::KeyPoint>& vKeys1,
     mvbMatched1.resize(mvKeys1.size());
     for(size_t i=0, iend=vMatches12.size();i<iend; i++)
     {
-        LOG_FIRST_N(INFO, 1);
         if(vMatches12[i]>=0)
         {
             mvMatches12.push_back(make_pair(i,vMatches12[i]));
@@ -64,6 +64,7 @@ bool TwoViewReconstruction::Reconstruct(const std::vector<cv::KeyPoint>& vKeys1,
     }
 
     const int N = mvMatches12.size();
+    LOG(INFO) << "mvMatches12.size() = " << N;
 
     // Indices for minimum set selection
     vector<size_t> vAllIndices;
@@ -72,7 +73,7 @@ bool TwoViewReconstruction::Reconstruct(const std::vector<cv::KeyPoint>& vKeys1,
 
     for(int i=0; i<N; i++)
     {
-        LOG_FIRST_N(INFO, 1);
+        LOG_FIRST_N(INFO, 1) << __PRETTY_FUNCTION__;
         vAllIndices.push_back(i);
     }
 
@@ -80,16 +81,17 @@ bool TwoViewReconstruction::Reconstruct(const std::vector<cv::KeyPoint>& vKeys1,
     mvSets = vector< vector<size_t> >(mMaxIterations,vector<size_t>(8,0));
 
     DUtils::Random::SeedRandOnce(0);
+    LOG(INFO) << "mMaxIterations = " << mMaxIterations;
 
     for(int it=0; it<mMaxIterations; it++)
     {
-        LOG_FIRST_N(INFO, 1);
+//        LOG_FIRST_N(INFO, 1) << __PRETTY_FUNCTION__;
         vAvailableIndices = vAllIndices;
 
         // Select a minimum set
         for(size_t j=0; j<8; j++)
         {
-            LOG_FIRST_N(INFO, 1);
+//            LOG_FIRST_N(INFO, 1) << __PRETTY_FUNCTION__;
             int randi = DUtils::Random::RandomInt(0,vAvailableIndices.size()-1);
             int idx = vAvailableIndices[randi];
 
@@ -117,17 +119,17 @@ bool TwoViewReconstruction::Reconstruct(const std::vector<cv::KeyPoint>& vKeys1,
     float RH = SH/(SH+SF);
 
     float minParallax = 1.0;
-    LOG_FIRST_N(INFO, 1);
+    LOG(INFO) << "RH = " << RH;
     // Try to reconstruct from homography or fundamental depending on the ratio (0.40-0.45)
     if(RH>0.50) // if(RH>0.40)
     {
-        LOG_FIRST_N(INFO, 1);
+//        LOG_FIRST_N(INFO, 1) << __PRETTY_FUNCTION__;
         //cout << "Initialization from Homography" << endl;
         return ReconstructH(vbMatchesInliersH,H, mK,R21,t21,vP3D,vbTriangulated,minParallax,50);
     }
     else //if(pF_HF>0.6)
     {
-        LOG_FIRST_N(INFO, 1);
+//        LOG_FIRST_N(INFO, 1) << __PRETTY_FUNCTION__;
         //cout << "Initialization from Fundamental" << endl;
         return ReconstructF(vbMatchesInliersF,F,mK,R21,t21,vP3D,vbTriangulated,minParallax,50);
     }
@@ -135,6 +137,7 @@ bool TwoViewReconstruction::Reconstruct(const std::vector<cv::KeyPoint>& vKeys1,
 
 void TwoViewReconstruction::FindHomography(vector<bool> &vbMatchesInliers, float &score, cv::Mat &H21)
 {
+//    LOG_FIRST_N(INFO, 1) << __PRETTY_FUNCTION__;
     // Number of putative matches
     const int N = mvMatches12.size();
 
@@ -181,11 +184,13 @@ void TwoViewReconstruction::FindHomography(vector<bool> &vbMatchesInliers, float
             score = currentScore;
         }
     }
+    LOG_FIRST_N(INFO, 1) << __PRETTY_FUNCTION__;
 }
 
 
 void TwoViewReconstruction::FindFundamental(vector<bool> &vbMatchesInliers, float &score, cv::Mat &F21)
 {
+    LOG_FIRST_N(INFO, 1) << __PRETTY_FUNCTION__;
     // Number of putative matches
     const int N = vbMatchesInliers.size();
 
@@ -232,6 +237,7 @@ void TwoViewReconstruction::FindFundamental(vector<bool> &vbMatchesInliers, floa
             score = currentScore;
         }
     }
+    LOG_FIRST_N(INFO, 1) << __PRETTY_FUNCTION__;
 }
 
 
@@ -508,10 +514,16 @@ bool TwoViewReconstruction::ReconstructF(vector<bool> &vbMatchesInliers, cv::Mat
     int nGood3 = CheckRT(R1,t2,mvKeys1,mvKeys2,mvMatches12,vbMatchesInliers,K, vP3D3, 4.0*mSigma2, vbTriangulated3, parallax3);
     int nGood4 = CheckRT(R2,t2,mvKeys1,mvKeys2,mvMatches12,vbMatchesInliers,K, vP3D4, 4.0*mSigma2, vbTriangulated4, parallax4);
 
+    LOG(INFO) << "nGood1 = " << nGood1
+              << " nGood2 = " << nGood2
+            << " nGood3 = " << nGood3
+            << " nGood4 = " << nGood4;
+
     int maxGood = max(nGood1,max(nGood2,max(nGood3,nGood4)));
 
     R21 = cv::Mat();
     t21 = cv::Mat();
+
 
     int nMinGood = max(static_cast<int>(0.9*N),minTriangulated);
 
@@ -526,14 +538,23 @@ bool TwoViewReconstruction::ReconstructF(vector<bool> &vbMatchesInliers, cv::Mat
         nsimilar++;
 
     // If there is not a clear winner or not enough triangulated points reject initialization
-    if(maxGood<nMinGood || nsimilar>1)
+//    if(maxGood<nMinGood || nsimilar>1)
     {
-        return false;
+        LOG(INFO) << "maxGood = " << maxGood
+                  << " nMinGood = " << nMinGood
+                  << " nsimilar = " << nsimilar;
+//        return false;
     }
 
     // If best reconstruction has enough parallax initialize
     if(maxGood==nGood1)
     {
+        LOG(INFO) << "maxGood = " << maxGood
+                  << " nGood1 = " << nGood1
+                  << " parallax1 = " << parallax1
+                  << " minParallax = " << minParallax << endl
+                  << " R1 = " << endl << R1 << endl
+                  << " t1 = " << endl << t1;
         if(parallax1>minParallax)
         {
             vP3D = vP3D1;
@@ -545,6 +566,12 @@ bool TwoViewReconstruction::ReconstructF(vector<bool> &vbMatchesInliers, cv::Mat
         }
     }else if(maxGood==nGood2)
     {
+        LOG(INFO) << "maxGood = " << maxGood
+                  << " nGood2 = " << nGood2
+                  << " parallax2 = " << parallax2
+                  << " minParallax = " << minParallax << endl
+                  << " R2 = " << endl << R2 << endl
+                  << " t1 = " << endl << t1;
         if(parallax2>minParallax)
         {
             vP3D = vP3D2;
@@ -556,6 +583,12 @@ bool TwoViewReconstruction::ReconstructF(vector<bool> &vbMatchesInliers, cv::Mat
         }
     }else if(maxGood==nGood3)
     {
+        LOG(INFO) << "maxGood = " << maxGood
+                  << " nGood3 = " << nGood3
+                  << " parallax3 = " << parallax3
+                  << " minParallax = " << minParallax << endl
+                << " R1 = " << endl << R1 << endl
+                << " t2 = " << endl << t2;
         if(parallax3>minParallax)
         {
             vP3D = vP3D3;
@@ -567,6 +600,12 @@ bool TwoViewReconstruction::ReconstructF(vector<bool> &vbMatchesInliers, cv::Mat
         }
     }else if(maxGood==nGood4)
     {
+        LOG(INFO) << "maxGood = " << maxGood
+                  << " nGood4 = " << nGood4
+                  << " parallax4 = " << parallax4
+                  << " minParallax = " << minParallax << endl
+                  << " R2 = " << endl << R2 << endl
+                  << " t2 = " << endl << t2;
         if(parallax4>minParallax)
         {
             vP3D = vP3D4;
@@ -577,7 +616,7 @@ bool TwoViewReconstruction::ReconstructF(vector<bool> &vbMatchesInliers, cv::Mat
             return true;
         }
     }
-
+    LOG(INFO) << "F return false";
     return false;
 }
 
@@ -607,6 +646,7 @@ bool TwoViewReconstruction::ReconstructH(vector<bool> &vbMatchesInliers, cv::Mat
 
     if(d1/d2<1.00001 || d2/d3<1.00001)
     {
+        LOG(INFO) << "d1/d2<1.00001 || d2/d3<1.00001 return false";
         return false;
     }
 
@@ -735,10 +775,10 @@ bool TwoViewReconstruction::ReconstructH(vector<bool> &vbMatchesInliers, cv::Mat
         vt[bestSolutionIdx].copyTo(t21);
         vP3D = bestP3D;
         vbTriangulated = bestTriangulated;
-
+        LOG(INFO) << "H return true";
         return true;
     }
-
+    LOG(INFO) << "H return false";
     return false;
 }
 
