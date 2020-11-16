@@ -57,7 +57,8 @@ public:
     // Mask is ignored in the current implementation.
     int operator()( cv::InputArray _image, cv::InputArray _mask,
                     std::vector<cv::KeyPoint>& _keypoints,
-                    cv::OutputArray _descriptors, std::vector<int> &vLappingArea);
+                    cv::OutputArray _descriptors, std::vector<int> &vLappingArea,
+                    std::vector < std::vector<cv::KeyPoint> > &allLevelsKeypoints);
 
     int inline GetLevels(){
         return nlevels;}

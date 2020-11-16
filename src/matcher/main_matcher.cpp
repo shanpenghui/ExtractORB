@@ -25,61 +25,13 @@ bool match(const cv::Mat &descriptors1, const cv::Mat &descriptors2,std::vector<
     }
 }
 
-void match_bf(const cv::Mat& img1,const cv::Mat& img2)
-{
-    cv::Mat des1,des2;
-
-    //Feature Detect
-    vector<cv::KeyPoint> keypoints1,keypoints2;
-    ORB_SLAM3::ORBextractor detector = ORB_SLAM3::ORBextractor(2000,1.2,8,20,7);
-
-    vector<int> vLapping = {0, 1000};
-    detector(img1,cv::Mat(),keypoints1,des1,vLapping);
-    detector(img2,cv::Mat(),keypoints2,des2,vLapping);
-
-    //BF match
-    vector<cv::DMatch> simple_matches;
-    vector<cv::DMatch> cross_matches;
-    vector<cv::DMatch> lowe_matches;
-
-//    ORBmatcherBF matcher;
-
-    match(des1,des2,simple_matches);
-//    matcher.match_cross_verify(des1,des2,cross_matches);
-//    matcher.match_lowe_ratio(des1,des2,0.8,lowe_matches);
-
-    string str;
-    //Draw Match Reuslt
-    cv::Mat simple,cross,lowe;
-    cv::drawMatches(img1,keypoints1,img2,keypoints2,simple_matches,simple);
-//    str="ORB_simple_bf: "+to_string(simple_matches.size());
-//    cv::putText(simple,str,cv::Point(150,150),cv::FONT_HERSHEY_DUPLEX,3.0,cv::Scalar(255,255,0));
-
-//    cv::drawMatches(img1,keypoints1,img2,keypoints2,cross_matches,cross);
-//    str="ORB_cross: "+to_string(cross_matches.size());
-//    cv::putText(cross,str,cv::Point(150,150),cv::FONT_HERSHEY_DUPLEX,3.0,cv::Scalar(255,255,0));
-
-//    cv::drawMatches(img1,keypoints1,img2,keypoints2,lowe_matches,lowe);
-//    str="ORB_lowe: "+to_string(lowe_matches.size());
-//    cv::putText(lowe,str,cv::Point(150,150),cv::FONT_HERSHEY_DUPLEX,3.0,cv::Scalar(255,255,0));
-
-    cv::namedWindow("ORB_simple_bf",0);
-    cv::imshow("ORB_simple_bf",simple);
-//    cv::namedWindow("ORB_cross",0);
-//    cv::imshow("ORB_cross",cross);
-//    cv::namedWindow("ORB_lowe",0);
-//    cv::imshow("ORB_lowe",lowe);
-
-    cv::waitKey(0);
-}
-
 int main(int argc, char **argv) {
 
-    // Google log
+    // 设置 Google log
     google::InitGoogleLogging(argv[0]);
     google::SetLogDestination(google::GLOG_INFO, "../log/log_");
 
-    // ORB_SLAM3 yaml 配置
+    // 配置 ORB_SLAM3
     int nFeatures = 1500;       // 特征点上限
     float fScaleFactor = 1.2;   // 图像金字塔缩放系数
     int nLevels = 8;            // 图像金字塔层数
@@ -95,7 +47,7 @@ int main(int argc, char **argv) {
 
     //---------------------- 1st Frame
     // 读取图像
-    string image_1_file_path = "../pic/robot/866_im.jpg";
+    string image_1_file_path = "../pic/TUM/dataset-corridor2_512_16/1520616230457034076.png";
     cv::Mat image_1 = cv::imread(image_1_file_path, cv::IMREAD_GRAYSCALE);
     if (image_1.empty()) {
         cout << "The " << image_1_file_path << " was not found, please check if it existed." << endl;
@@ -103,25 +55,15 @@ int main(int argc, char **argv) {
     } else
         cout << "The " << image_1_file_path << " image_1 load successed!" << endl;
 
-    cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE(3.0, cv::Size(8, 8));
-    cv::Mat im_clahe;
-    clahe->apply(image_1, im_clahe);
-    image_1 = im_clahe;
+    // 图像增强
+//    cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE(3.0, cv::Size(8, 8));
+//    cv::Mat im_clahe;
+//    clahe->apply(image_1, im_clahe);
+//    image_1 = im_clahe;
 
+    // 初始化ORB提取器
     ORB_SLAM3::ORBextractor *mpIniORBextractor = new ORB_SLAM3::ORBextractor(5 * nFeatures, fScaleFactor, nLevels,
                                                                              fIniThFAST, fMinThFAST);
-
-    // Extract Keypoints
-    mpIniORBextractor->ComputePyramid(image_1);
-    vector<vector<cv::KeyPoint>> allKeypoints_1;
-    mpIniORBextractor->ComputeKeyPointsOctTree(allKeypoints_1);
-
-    // 统计所有层的特征点并进行尺度恢复
-    int image_1_total_keypoints = 0;
-    for (int level = 0; level < nLevels; ++level) {
-        image_1_total_keypoints += (int) allKeypoints_1[level].size();
-    }
-    cout << "Image_1 has total " << image_1_total_keypoints << " keypoints" << endl;
 
     // Start Frame Constructor
     ORB_SLAM3::Frame mCurrentFrame_1;
@@ -183,41 +125,50 @@ int main(int argc, char **argv) {
     }
 
     // Show Frame 1
+    // 统计所有层的特征点并进行尺度恢复
+    int image_1_total_keypoints = 0;
+    for (int level = 0; level < nLevels; ++level) {
+        image_1_total_keypoints += (int) mCurrentFrame_1.allLevelsKeypoints[level].size();
+    }
+    cout << "Image_1 has total " << image_1_total_keypoints << " keypoints" << endl;
     vector<cv::KeyPoint> out_put_all_keypoints_1(image_1_total_keypoints);
     for (int level = 0; level < nLevels; ++level) {
         if (level == 0) {
-            for (int i = 0; i < allKeypoints_1[level].size(); ++i) {
-                out_put_all_keypoints_1.push_back(allKeypoints_1[level][i]);
+            for (int i = 0; i < mCurrentFrame_1.allLevelsKeypoints[level].size(); ++i) {
+                out_put_all_keypoints_1.push_back(mCurrentFrame_1.allLevelsKeypoints[level][i]);
             }
         }
         float scale = mpIniORBextractor->mvScaleFactor[level];
-        for (vector<cv::KeyPoint>::iterator key = allKeypoints_1[level].begin();
-             key != allKeypoints_1[level].end(); key++) {
+        for (vector<cv::KeyPoint>::iterator key = mCurrentFrame_1.allLevelsKeypoints[level].begin();
+             key != mCurrentFrame_1.allLevelsKeypoints[level].end(); key++) {
             key->pt *= scale; //尺度恢复
         }
-        out_put_all_keypoints_1.insert(out_put_all_keypoints_1.end(), allKeypoints_1[level].begin(),
-                                     allKeypoints_1[level].end());
+        out_put_all_keypoints_1.insert(out_put_all_keypoints_1.end(), mCurrentFrame_1.allLevelsKeypoints[level].begin(),
+                                       mCurrentFrame_1.allLevelsKeypoints[level].end());
     }
-
     cv::Mat out_put_image_1;
     drawKeypoints(image_1, out_put_all_keypoints_1, out_put_image_1);
     imshow("Image 1", out_put_image_1);
+    cvWaitKey(0);
 
+    // 保存第一帧图像的特征点
     std::vector<cv::Point2f> mvbPrevMatched;
     mvbPrevMatched.resize(mCurrentFrame_1.mvKeysUn.size());
     for(size_t i=0; i<mCurrentFrame_1.mvKeysUn.size(); i++)
         mvbPrevMatched[i]=mCurrentFrame_1.mvKeysUn[i].pt;
 
+    // 构造初始化器
     ORB_SLAM3::Initializer* mpInitializer;
     mpInitializer =  new ORB_SLAM3::Initializer(mCurrentFrame_1,1.0,200);
     std::vector<int> mvIniMatches;
     fill(mvIniMatches.begin(),mvIniMatches.end(),-1);
 
+    // 保存第一帧图像的描述子
     cv::Mat descriptors_1 = mCurrentFrame_1.mDescriptors;
 
     //---------------------- 2nd Frame
     // 读取图像
-    string image_2_file_path = "../pic/robot/867_im.jpg";
+    string image_2_file_path = "../pic/TUM/dataset-corridor2_512_16/1520616233707158795.png";
     cv::Mat image_2 = cv::imread(image_2_file_path, cv::IMREAD_GRAYSCALE);
     if (image_2.empty()) {
         cout << "The " << image_2_file_path << " was not found, please check if it existed." << endl;
@@ -225,21 +176,10 @@ int main(int argc, char **argv) {
     } else
         cout << "The " << image_2_file_path << " image_2 load successed!" << endl;
 
-    cv::Mat im_clahe_2;
-    clahe->apply(image_2, im_clahe_2);
-    image_2 = im_clahe_2;
-
-    // Extract Keypoints
-    mpIniORBextractor->ComputePyramid(image_2);
-    vector<vector<cv::KeyPoint>> allKeypoints_2;
-    mpIniORBextractor->ComputeKeyPointsOctTree(allKeypoints_2);
-
-    // 统计所有层的特征点并进行尺度恢复
-    int image_2_total_keypoints = 0;
-    for (int level = 0; level < nLevels; ++level) {
-        image_2_total_keypoints += (int) allKeypoints_2[level].size();
-    }
-    cout << "Image_2 has total " << image_2_total_keypoints << " keypoints" << endl;
+    // 图像增强
+//    cv::Mat im_clahe_2;
+//    clahe->apply(image_2, im_clahe_2);
+//    image_2 = im_clahe_2;
 
     // Start Frame Constructor
     ORB_SLAM3::Frame mCurrentFrame_2;
@@ -254,7 +194,6 @@ int main(int argc, char **argv) {
     // Frame 2
     mCurrentFrame_2 = ORB_SLAM3::Frame(mImGray_2, timestamp_2, mpIniORBextractor, mpORBVocabulary, mpCamera, mDistCoef,
                                        mbf, mThDepth);
-
     if(mCurrentFrame_2.mvKeys.size()>100) {
         LOG(INFO) << "mCurrentFrame_2.mvKeys.size() = " << mCurrentFrame_2.mvKeys.size();
     }
@@ -264,20 +203,26 @@ int main(int argc, char **argv) {
     }
 
     // Show Frame 2
+    // 统计所有层的特征点并进行尺度恢复
+    int image_2_total_keypoints = 0;
+    for (int level = 0; level < nLevels; ++level) {
+        image_2_total_keypoints += (int) mCurrentFrame_2.allLevelsKeypoints[level].size();
+    }
+    cout << "Image_2 has total " << image_1_total_keypoints << " keypoints" << endl;
     vector<cv::KeyPoint> out_put_all_keypoints_2(image_2_total_keypoints);
     for (int level = 0; level < nLevels; ++level) {
         if (level == 0) {
-            for (int i = 0; i < allKeypoints_2[level].size(); ++i) {
-                out_put_all_keypoints_2.push_back(allKeypoints_2[level][i]);
+            for (int i = 0; i < mCurrentFrame_2.allLevelsKeypoints[level].size(); ++i) {
+                out_put_all_keypoints_2.push_back(mCurrentFrame_2.allLevelsKeypoints[level][i]);
             }
         }
         float scale = mpIniORBextractor->mvScaleFactor[level];
-        for (vector<cv::KeyPoint>::iterator key = allKeypoints_2[level].begin();
-             key != allKeypoints_2[level].end(); key++) {
+        for (vector<cv::KeyPoint>::iterator key = mCurrentFrame_2.allLevelsKeypoints[level].begin();
+             key != mCurrentFrame_2.allLevelsKeypoints[level].end(); key++) {
             key->pt *= scale; //尺度恢复
         }
-        out_put_all_keypoints_2.insert(out_put_all_keypoints_2.end(), allKeypoints_2[level].begin(),
-                                       allKeypoints_2[level].end());
+        out_put_all_keypoints_2.insert(out_put_all_keypoints_2.end(), mCurrentFrame_2.allLevelsKeypoints[level].begin(),
+                                       mCurrentFrame_2.allLevelsKeypoints[level].end());
     }
 
     cv::Mat out_put_image_2;
@@ -294,6 +239,7 @@ int main(int argc, char **argv) {
     cout << "2帧匹配对数是 " << nmatches << endl;
 
     //---------------------------------------------------------------
+    // 画匹配的效果图
     vector<cv::DMatch> matches;
     cv::BFMatcher BFmatcher;
     BFmatcher.match(descriptors_1, descriptors_2, matches);
@@ -310,6 +256,7 @@ int main(int argc, char **argv) {
     cv::imshow("ORB drawMatches", out_put_match_image);
     cv::waitKey(0);
 
+    // 计算两图像之间的位姿关系
     cv::Mat Rcw; // Current Camera Rotation
     cv::Mat tcw; // Current Camera Translation
     std::vector<cv::Point3f> mvIniP3D;
@@ -323,6 +270,7 @@ int main(int argc, char **argv) {
         cout << "ReconstructWithTwoViews failed" << endl;
     }
 
+    // 在第二帧图像中画出连接两个图像特征点的直线
     vector<int> vMatches; // Initialization: correspondeces with reference keypoints
     vMatches = mvIniMatches;
 
@@ -340,9 +288,11 @@ int main(int argc, char **argv) {
         if(vMatches[i]>=0)
         {
             cv::line(image_2, vIniKeys[i].pt,vCurrentKeys[vMatches[i]].pt,
-                     cv::Scalar(0,255,0));
+                     cv::Scalar(255,0,255, 0));
         }
     }
+    cv::Mat line_image;
+    cv::imshow("Line", image_2);
     cv::waitKey(0);
 
     return 0;

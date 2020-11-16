@@ -770,184 +770,123 @@ namespace ORB_SLAM3
         return vResultKeys;
     }
 
-void ORBextractor::ComputeKeyPointsOctTree(
-    vector<vector<KeyPoint> > &allKeypoints)    //所有的特征点，这里第一层vector存储的是某图层里面的所有特征点，
-//第二层存储的是整个图像金字塔中的所有图层里面的所有特征点
-{
-//    LOG(INFO) << __PRETTY_FUNCTION__ << " start";
+    void ORBextractor::ComputeKeyPointsOctTree(vector<vector<KeyPoint> >& allKeypoints)
+    {
+        allKeypoints.resize(nlevels);
 
-    //重新调整图像层数
-    allKeypoints.resize(nlevels);
+        const float W = 30;
 
-    //图像cell的尺寸，是个正方形，可以理解为边长in像素坐标
-    const float W = 30;
+        for (int level = 0; level < nlevels; ++level)
+        {
+            const int minBorderX = EDGE_THRESHOLD-3;
+            const int minBorderY = minBorderX;
+            const int maxBorderX = mvImagePyramid[level].cols-EDGE_THRESHOLD+3;
+            const int maxBorderY = mvImagePyramid[level].rows-EDGE_THRESHOLD+3;
 
-    // 对每一层图像做处理
-    //遍历所有图像
-    for (int level = 0; level < nlevels; ++level) {
-        //计算这层图像的坐标边界， NOTICE 注意这里是坐标边界，EDGE_THRESHOLD指的应该是可以提取特征点的有效图像边界，后面会一直使用“有效图像边界“这个自创名词
-        const int minBorderX = EDGE_THRESHOLD - 3;            //这里的3是因为在计算FAST特征点的时候，需要建立一个半径为3的圆
-        const int minBorderY = minBorderX;                    //minY的计算就可以直接拷贝上面的计算结果了
-        const int maxBorderX = mvImagePyramid[level].cols - EDGE_THRESHOLD + 3;
-        const int maxBorderY = mvImagePyramid[level].rows - EDGE_THRESHOLD + 3;
+            vector<cv::KeyPoint> vToDistributeKeys;
+            vToDistributeKeys.reserve(nfeatures*10);
 
-//        cout << "minBorderX = " << minBorderX
-//             << " minBorderY = " << minBorderY
-//             << " maxBorderX = " << maxBorderX
-//             << " maxBorderY = " << maxBorderY << endl;
-        //存储需要进行平均分配的特征点
-        vector<cv::KeyPoint> vToDistributeKeys;
-        //一般地都是过量采集，所以这里预分配的空间大小是nfeatures*10
-        vToDistributeKeys.reserve(nfeatures * 10);
+            const float width = (maxBorderX-minBorderX);
+            const float height = (maxBorderY-minBorderY);
 
-        //计算进行特征点提取的图像区域尺寸
-        const float width = (maxBorderX - minBorderX);
-//        cout << "width = " << width << endl;
-        const float height = (maxBorderY - minBorderY);
-//        cout << "height = " << height << endl;
+            const int nCols = width/W;
+            const int nRows = height/W;
+            const int wCell = ceil(width/nCols);
+            const int hCell = ceil(height/nRows);
 
-        //计算网格在当前层的图像有的行数和列数
-        const int nCols = width / W;
-        const int nRows = height / W;
-        //计算每个图像网格所占的像素行数和列数
-        const int wCell = ceil(width / nCols);
-        const int hCell = ceil(height / nRows);
+            for(int i=0; i<nRows; i++)
+            {
+                const float iniY =minBorderY+i*hCell;
+                float maxY = iniY+hCell+6;
 
-//        LOG(INFO) << __PRETTY_FUNCTION__ << " 第 " << level + 1 << " 层图像的像素宽 " << width << " 高 " << height << ", 每个格子宽 "
-//                  << wCell << " 高 " << hCell
-//                  << " 像素, 被切割成 " << nRows << " 行 " << nCols << " 列, ";
-
-#ifdef SHOW_DIVIDE_IMAGE
-        Mat tmp = mvImagePyramid[level];
-        for (int kRow = 0; kRow < nRows; ++kRow) {
-          for (int kCol = 0; kCol < nCols; ++kCol) {
-            int kRow_X = minBorderX + kRow*wCell;
-            int kCol_Y = minBorderY + kCol*hCell;
-            tmp.col(kCol_Y) = (0, 0, 0);
-            tmp.row(kRow_X) = (0, 0, 0);
-          }
-        }
-        imshow("ComputeKeyPointsOctTree", tmp);
-        waitKey(0);
-#endif
-
-        //开始遍历图像网格，还是以行开始遍历的
-        for (int i = 0; i < nRows; i++) {
-            //计算当前网格初始行坐标
-            const float iniY = minBorderY + i * hCell;
-            //计算当前网格最大的行坐标，这里的+6=+3+3，即考虑到了多出来3是为了cell边界像素进行FAST特征点提取用
-            //前面的EDGE_THRESHOLD指的应该是提取后的特征点所在的边界，所以minBorderY是考虑了计算半径时候的图像边界
-            //目测一个图像网格的大小是25*25啊
-            float maxY = iniY + hCell + 6;
-
-            //如果初始的行坐标就已经超过了有效的图像边界了，这里的“有效图像”是指原始的、可以提取FAST特征点的图像区域
-            if (iniY >= maxBorderY - 3)
-                //那么就跳过这一行
-                continue;
-            //如果图像的大小导致不能够正好划分出来整齐的图像网格，那么就要委屈最后一行了
-            if (maxY > maxBorderY)
-                maxY = maxBorderY;
-
-            //开始列的遍历
-            for (int j = 0; j < nCols; j++) {
-                //计算初始的列坐标
-                const float iniX = minBorderX + j * wCell;
-                //计算这列网格的最大列坐标，+6的含义和前面相同
-                float maxX = iniX + wCell + 6;
-                //判断坐标是否在图像中
-                //TODO 不太能够明白为什么要-6，前面不都是-3吗
-                //!BUG  正确应该是maxBorderX-3
-                if (iniX >= maxBorderX - 6)
+                if(iniY>=maxBorderY-3)
                     continue;
-                //如果最大坐标越界那么委屈一下
-                if (maxX > maxBorderX)
-                    maxX = maxBorderX;
+                if(maxY>maxBorderY)
+                    maxY = maxBorderY;
 
-                // FAST提取兴趣点, 自适应阈值
-                //这个向量存储这个cell中的特征点
-                vector<cv::KeyPoint> vKeysCell;
-                //调用opencv的库函数来检测FAST角点
-                FAST(mvImagePyramid[level].rowRange(iniY, maxY).colRange(iniX, maxX),    //待检测的图像，这里就是当前遍历到的图像块
-                     vKeysCell,            //存储角点位置的容器
-                     iniThFAST,            //检测阈值
-                     true);                //使能非极大值抑制
+                for(int j=0; j<nCols; j++)
+                {
+                    const float iniX =minBorderX+j*wCell;
+                    float maxX = iniX+wCell+6;
+                    if(iniX>=maxBorderX-6)
+                        continue;
+                    if(maxX>maxBorderX)
+                        maxX = maxBorderX;
 
-                //如果这个图像块中使用默认的FAST检测阈值没有能够检测到角点
-                if (vKeysCell.empty()) {
-                    //那么就使用更低的阈值来进行重新检测
-                    FAST(mvImagePyramid[level].rowRange(iniY, maxY).colRange(iniX, maxX),    //待检测的图像
-                         vKeysCell,        //存储角点位置的容器
-                         minThFAST,        //更低的检测阈值
-                         true);            //使能非极大值抑制
-//                    LOG(INFO) << __PRETTY_FUNCTION__ << " 第 " << i + 1 << " 行, 第 " << j + 1 << " 列 第 " << level + 1
-//                              << " 层图像特征点数量为 " << vKeysCell.size();
+                    vector<cv::KeyPoint> vKeysCell;
+
+                    FAST(mvImagePyramid[level].rowRange(iniY,maxY).colRange(iniX,maxX),
+                         vKeysCell,iniThFAST,true);
+
+                    /*if(bRight && j <= 13){
+                        FAST(mvImagePyramid[level].rowRange(iniY,maxY).colRange(iniX,maxX),
+                             vKeysCell,10,true);
+                    }
+                    else if(!bRight && j >= 16){
+                        FAST(mvImagePyramid[level].rowRange(iniY,maxY).colRange(iniX,maxX),
+                             vKeysCell,10,true);
+                    }
+                    else{
+                        FAST(mvImagePyramid[level].rowRange(iniY,maxY).colRange(iniX,maxX),
+                             vKeysCell,iniThFAST,true);
+                    }*/
+
+
+                    if(vKeysCell.empty())
+                    {
+                        FAST(mvImagePyramid[level].rowRange(iniY,maxY).colRange(iniX,maxX),
+                             vKeysCell,minThFAST,true);
+                        /*if(bRight && j <= 13){
+                            FAST(mvImagePyramid[level].rowRange(iniY,maxY).colRange(iniX,maxX),
+                                 vKeysCell,5,true);
+                        }
+                        else if(!bRight && j >= 16){
+                            FAST(mvImagePyramid[level].rowRange(iniY,maxY).colRange(iniX,maxX),
+                                 vKeysCell,5,true);
+                        }
+                        else{
+                            FAST(mvImagePyramid[level].rowRange(iniY,maxY).colRange(iniX,maxX),
+                                 vKeysCell,minThFAST,true);
+                        }*/
+                    }
+
+                    if(!vKeysCell.empty())
+                    {
+                        for(vector<cv::KeyPoint>::iterator vit=vKeysCell.begin(); vit!=vKeysCell.end();vit++)
+                        {
+                            (*vit).pt.x+=j*wCell;
+                            (*vit).pt.y+=i*hCell;
+                            vToDistributeKeys.push_back(*vit);
+                        }
+                    }
+
                 }
+            }
 
-                //当图像cell中检测到FAST角点的时候执行下面的语句
-                if (!vKeysCell.empty()) {
-                    //遍历其中的所有FAST角点
-                    for (vector<cv::KeyPoint>::iterator vit = vKeysCell.begin(); vit != vKeysCell.end(); vit++) {
-                        //NOTICE 到目前为止，这些角点的坐标都是基于图像cell的，现在我们要先将其恢复到当前的【坐标边界】下的坐标
-                        //这样做是因为在下面使用八叉树法整理特征点的时候将会使用得到这个坐标
-                        //在后面将会被继续转换成为在当前图层的扩充图像坐标系下的坐标
-                        (*vit).pt.x += j * wCell;
-                        (*vit).pt.y += i * hCell;
-                        //然后将其加入到”等待被分配“的特征点容器中
-                        vToDistributeKeys.push_back(*vit);
-                    }//遍历图像cell中的所有的提取出来的FAST角点，并且恢复其在整个金字塔当前层图像下的坐标
-                }//当图像cell中检测到FAST角点的时候执行下面的语句
-                else {
-//                    LOG(INFO) << __PRETTY_FUNCTION__ << " 第 " << i + 1 << " 行, 第 " << j + 1 << " 列 第 " << level + 1
-//                              << " 层图像特征点数量为 0";
-                }
+            vector<KeyPoint> & keypoints = allKeypoints[level];
+            keypoints.reserve(nfeatures);
 
-            }//开始遍历图像cell的列
-        }//开始遍历图像cell的行
+            keypoints = DistributeOctTree(vToDistributeKeys, minBorderX, maxBorderX,
+                                          minBorderY, maxBorderY,mnFeaturesPerLevel[level], level);
 
-        //声明一个对当前图层的特征点的容器的引用
-        vector<KeyPoint> &keypoints = allKeypoints[level];
-        //并且调整其大小为欲提取出来的特征点个数（当然这里也是扩大了的，因为不可能所有的特征点都是在这一个图层中提取出来的）
-        keypoints.reserve(nfeatures);
+            const int scaledPatchSize = PATCH_SIZE*mvScaleFactor[level];
 
-        // 根据mnFeaturesPerLevel,即该层的兴趣点数,对特征点进行剔除
-        //返回值是一个保存有特征点的vector容器，含有剔除后的保留下来的特征点
-        //得到的特征点的坐标，依旧是在当前图层下来讲的
-        keypoints = DistributeOctTree(vToDistributeKeys,            //当前图层提取出来的特征点，也即是等待剔除的特征点
-            //NOTICE 注意此时特征点所使用的坐标都是在“半径扩充图像”下的
-                                      minBorderX, maxBorderX,        //当前图层图像的边界，而这里的坐标却都是在“边缘扩充图像”下的
-                                      minBorderY, maxBorderY,
-                                      mnFeaturesPerLevel[level],    //希望保留下来的当前层图像的特征点个数
-                                      level);                        //当前层图像所在的图层
-
-        // 显示当前层的图像和特征点
-//        DisplayImageAndKeypoints(mvImagePyramid[level], level, keypoints);
-
-        //PATCH_SIZE是对于底层的初始图像来说的，现在要根据当前图层的尺度缩放倍数进行缩放得到缩放后的PATCH大小 和特征点的方向计算有关
-        const int scaledPatchSize = PATCH_SIZE * mvScaleFactor[level];
-
-        // Add border to coordinates and scale information
-        //获取剔除过程后保留下来的特征点数目
-        const int nkps = keypoints.size();
-        //然后开始遍历这些特征点，恢复其在当前图层图像坐标系下的坐标
-        for (int i = 0; i < nkps; i++) {
-            //对每一个保留下来的特征点，恢复到相对于当前图层“边缘扩充图像下”的坐标系的坐标
-            keypoints[i].pt.x += minBorderX;
-            keypoints[i].pt.y += minBorderY;
-            //记录特征点来源的图像金字塔图层
-            keypoints[i].octave = level;
-            //记录计算方向的patch，缩放后对应的大小， 又被称作为特征点半径
-            keypoints[i].size = scaledPatchSize;
+            // Add border to coordinates and scale information
+            const int nkps = keypoints.size();
+            for(int i=0; i<nkps ; i++)
+            {
+                keypoints[i].pt.x+=minBorderX;
+                keypoints[i].pt.y+=minBorderY;
+                keypoints[i].octave=level;
+                keypoints[i].size = scaledPatchSize;
+            }
         }
+
+        // compute orientations
+        for (int level = 0; level < nlevels; ++level)
+            computeOrientation(mvImagePyramid[level], allKeypoints[level], umax);
     }
 
-    // compute orientations
-    //然后计算这些特征点的方向信息，注意这里还是分层计算的
-    for (int level = 0; level < nlevels; ++level)
-        computeOrientation(mvImagePyramid[level],    //对应的图层的图像
-                           allKeypoints[level],    //这个图层中提取并保留下来的特征点容器
-                           umax);                    //以及PATCH的横坐标边界
-//    LOG(INFO) << __PRETTY_FUNCTION__ << " end";
-}
     void ORBextractor::ComputeKeyPointsOld(std::vector<std::vector<KeyPoint> > &allKeypoints)
     {
         allKeypoints.resize(nlevels);
@@ -1137,7 +1076,8 @@ void ORBextractor::ComputeKeyPointsOctTree(
     }
 
     int ORBextractor::operator()( InputArray _image, InputArray _mask, vector<KeyPoint>& _keypoints,
-                                  OutputArray _descriptors, std::vector<int> &vLappingArea)
+                                  OutputArray _descriptors, std::vector<int> &vLappingArea,
+                                  std::vector < std::vector<cv::KeyPoint> > &allLevelsKeypoints)
     {
         //cout << "[ORBextractor]: Max Features: " << nfeatures << endl;
         if(_image.empty())
@@ -1151,6 +1091,7 @@ void ORBextractor::ComputeKeyPointsOctTree(
 
         vector < vector<KeyPoint> > allKeypoints;
         ComputeKeyPointsOctTree(allKeypoints);
+        allLevelsKeypoints = allKeypoints;
         //ComputeKeyPointsOld(allKeypoints);
 
         Mat descriptors;

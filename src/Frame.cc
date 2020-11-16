@@ -421,10 +421,9 @@ void Frame::ExtractORB(int flag, const cv::Mat &im, const int x0, const int x1)
     vector<int> vLapping = {x0,x1};
     LOG_FIRST_N(INFO, 1) << "x0 = " << x0 << " x1 = " << x1 << " flag = " << flag;
     if(flag==0)
-        monoLeft = (*mpORBextractorLeft)(im,cv::Mat(),mvKeys,mDescriptors,vLapping);
+        monoLeft = (*mpORBextractorLeft)(im,cv::Mat(),mvKeys,mDescriptors,vLapping, allLevelsKeypoints);
     else
-        monoRight = (*mpORBextractorRight)(im,cv::Mat(),mvKeysRight,mDescriptorsRight,vLapping);
-//    LOG(INFO) << "mvKeys = " << mvKeys.size();
+        monoRight = (*mpORBextractorRight)(im,cv::Mat(),mvKeysRight,mDescriptorsRight,vLapping, allLevelsKeypoints);
 }
 
 void Frame::SetPose(cv::Mat Tcw)
