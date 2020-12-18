@@ -139,7 +139,7 @@ void ComputePyramid(const int levels_num,
 
 int main() {
   // 1.读取图像
-  cv::Mat img = cv::imread("../pic/luna.jpg", CV_LOAD_IMAGE_COLOR);
+  cv::Mat img = cv::imread("../pic/TUM/dataset-corridor2_512_16/1520616230457034076.png", CV_LOAD_IMAGE_COLOR);
   // 1.读取图像 -合法性检查
   if (img.empty()) {
     cout << "no picture was found ...." << endl;
@@ -161,11 +161,11 @@ int main() {
   cout << "*************************" << endl << endl;
 
   // 3.对金字塔的每层图像分析特征点 - 初始化数据结构
-  vector<int> feature_num_per_level;  // TODO: 不知道什么含义
+  vector<int> feature_num_per_level;
   std::vector<std::vector<cv::KeyPoint>> allKeypoints;
   allKeypoints.resize(levels_num);
 
-  // 格子大小是 30*30, TODO:这是什么格子？
+  // 格子大小是 30*30
   const float border_width = 30;
 
   // 3.对金字塔的每层图像分析特征点 - 循环每层图像
@@ -344,7 +344,6 @@ int main() {
               to_expand_num++;
               vSizeAndPointerToNode.push_back(std::make_pair(n1.vkeys.size(), &lNodes.front()));
               // 把节点中的迭代器指向自身，在后面的判断条件中使用
-              // TODO:没懂
               lNodes.front().lit = lNodes.begin();
             }
           }
@@ -526,7 +525,7 @@ int main() {
   //对比试验
   cv::Mat out_img1;
   cv::drawKeypoints(img, out_put_all_keypoints, out_img1);
-  cv::imshow("四叉数", out_img1);
+  cv::imshow("ORB-SLAM3 Keypoints", out_img1);
   waitKey(0);
 
   cv::Mat img2;
@@ -534,7 +533,7 @@ int main() {
   Ptr<ORB> orb = ORB::create(1000);
   orb->detect(img, fast_keypoints);
   drawKeypoints(img, fast_keypoints, img2);
-  cv::imshow("orb", img2);
+  cv::imshow("OpenCV orb Keypoints", img2);
   cv::waitKey(0);
 
   return 0;
